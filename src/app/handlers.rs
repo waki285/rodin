@@ -5,7 +5,7 @@ use axum::{
     middleware::Next,
     response::{Html, IntoResponse, Redirect, Response},
 };
-use std::{net::SocketAddr, path::PathBuf};
+use std::{env, net::SocketAddr, path::PathBuf};
 use tokio::fs;
 
 use super::{markdown_enabled, render::inject_runtime_tokens, state::AppState};
@@ -137,6 +137,9 @@ fn find_subsequence(haystack: &[char], needle: &[char]) -> Option<usize> {
 }
 
 fn client_ip_from_headers(headers: &HeaderMap) -> Option<String> {
+    if env::var("TRUST_PROXY").is_err() || env::var("TRUST_PROXY").unwrap() != "true" {
+        return None;
+    }
     if let Some(val) = headers.get("CF-Connecting-IP") {
         if let Ok(s) = val.to_str() {
             let trimmed = s.trim();

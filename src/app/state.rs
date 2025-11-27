@@ -1,7 +1,6 @@
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use regex::Regex;
-use serde_json;
 use tokio::fs;
 
 use crate::frontmatter::FrontMatter;

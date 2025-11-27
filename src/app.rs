@@ -2,6 +2,8 @@ mod handlers;
 pub mod render;
 mod state;
 
+use std::env;
+
 use axum::{middleware, routing::get, Router};
 use tokio::net::TcpListener;
 use tower_http::compression::CompressionLayer;
@@ -48,8 +50,13 @@ pub async fn run() -> anyhow::Result<()> {
         .layer(middleware::from_fn(handlers::security_middleware))
         .with_state(app_state);
 
-    let listener = TcpListener::bind("0.0.0.0:3000").await?;
-    println!("Server running on http://0.0.0.0:3000");
+    let bind = env::var("BIND_ADDRESS").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let port = env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(3000);
+    let listener = TcpListener::bind(format!("{}:{}", bind, port)).await?;
+    println!("Server running on http://{}:{}", bind, port);
 
     axum::serve(
         listener,

@@ -1,6 +1,5 @@
 use crate::frontmatter::FrontMatter;
 use anyhow::Result;
-use serde_json;
 use std::{
     fs,
     path::{Path, PathBuf},
