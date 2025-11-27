@@ -222,6 +222,32 @@ pub fn markdown_response(state: &AppState, slug: &str) -> Response {
     }
 }
 
+pub async fn not_found_response() -> Response {
+    let html = r#"<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>404 Not Found</title>
+  <style>
+    body{margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:#e5e7eb;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+    .card{padding:24px 28px;border:1px solid #334155;border-radius:14px;background:#111827;box-shadow:0 12px 30px rgba(0,0,0,0.35);text-align:center;max-width:360px;}
+    h1{margin:0 0 12px;font-size:20px;}
+    p{margin:0;color:#cbd5e1;font-size:14px;}
+    a{color:#60a5fa;text-decoration:none;} a:hover{text-decoration:underline;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>404 Not Found</h1>
+    <p>お探しのページは見つかりませんでした。</p>
+    <p><a href="/">ホームに戻る</a></p>
+  </div>
+</body>
+</html>"#;
+    (StatusCode::NOT_FOUND, Html(html)).into_response()
+}
+
 // Middleware: add Referrer-Policy, CSP nonce, and reject overly long paths (path only, no query/fragment)
 pub async fn security_middleware(mut req: Request<Body>, next: Next) -> Response {
     let nonce = generate_nonce();

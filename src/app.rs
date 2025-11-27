@@ -2,10 +2,12 @@ mod handlers;
 pub mod render;
 mod state;
 
-use std::env;
+use std::{convert::Infallible, env};
 
+use axum::routing::get_service;
 use axum::{middleware, routing::get, Router};
 use tokio::net::TcpListener;
+use tower::service_fn;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
 
@@ -21,31 +23,22 @@ pub(crate) fn markdown_enabled() -> bool {
 pub async fn run() -> anyhow::Result<()> {
     let app_state = state::build_prerendered_state().await?;
 
+    let static_root = ServeDir::new("static/root").fallback(service_fn(|_req| async move {
+        let res = handlers::not_found_response().await;
+        Ok::<_, Infallible>(res)
+    }));
+
     let app = Router::new()
         .route("/", get(handlers::index_handler))
         .route("/profile", get(handlers::profile_handler))
         .route("/blog/{slug}", get(handlers::blog_handler))
         .route("/search", get(handlers::search_handler))
-        .route_service("/favicon.ico", ServeFile::new("static/favicon.ico"))
-        .route_service("/favicon.svg", ServeFile::new("static/favicon.svg"))
-        .route_service(
-            "/apple-touch-icon.png",
-            ServeFile::new("static/apple-touch-icon.png"),
-        )
-        .route_service(
-            "/android-chrome-192x192.png",
-            ServeFile::new("static/android-chrome-192x192.png"),
-        )
-        .route_service(
-            "/android-chrome-512x512.png",
-            ServeFile::new("static/android-chrome-512x512.png"),
-        )
-        .route_service("/robots.txt", ServeFile::new("static/robots.txt"))
         .route_service(
             "/sitemap.xml",
             ServeFile::new("static/generated/sitemap.xml"),
         )
         .nest_service("/assets", ServeDir::new("static"))
+        .fallback_service(get_service(static_root))
         .layer(CompressionLayer::new())
         .layer(middleware::from_fn(handlers::security_middleware))
         .with_state(app_state);

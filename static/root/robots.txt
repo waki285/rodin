@@ -3,4 +3,4 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /assets/generated/
 
-Sitemap: /sitemap.xml
+Sitemap: https://suzuneu.com/sitemap.xml
