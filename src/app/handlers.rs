@@ -197,8 +197,7 @@ pub fn markdown_response(state: &AppState, slug: &str) -> Response {
                 "text/plain; charset=utf-8",
             )],
             format!(
-                "Markdown配信はこのサーバーでは無効です。\n\
-                 Typstソースが必要なら /blog/{}.typ を参照してください。",
+                "Markdown配信はこのサーバーでは無効です。\nTypstソースが必要なら /blog/{}.typ を参照してください。",
                 slug
             ),
         )
