@@ -1,5 +1,5 @@
 {
-  "[lua][xml][javascript]": {
+  "[lua][xml][javascript][yaml][github-actions-workflow]": {
     "editor.tabSize": 2
   }
 }

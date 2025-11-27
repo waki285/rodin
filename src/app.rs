@@ -55,7 +55,24 @@ pub async fn run() -> anyhow::Result<()> {
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
+    .with_graceful_shutdown(shutdown_signal())
     .await?;
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{signal, SignalKind};
+        let mut sigterm = signal(SignalKind::terminate()).expect("install SIGTERM handler");
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {},
+            _ = sigterm.recv() => {},
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = tokio::signal::ctrl_c().await;
+    }
 }

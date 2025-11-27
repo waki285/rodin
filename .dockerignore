@@ -1,0 +1,17 @@
+target
+node_modules
+.git
+.gitignore
+Dockerfile
+.dockerignore
+*.log
+dist
+*.tmp
+tmp
+*.swp
+.DS_Store
+pnpm-store
+.vscode
+README.md
+static/build
+static/generated
