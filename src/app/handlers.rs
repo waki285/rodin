@@ -29,25 +29,28 @@ pub async fn blog_handler(
     headers: HeaderMap,
     Extension(nonce): Extension<String>,
 ) -> Response {
-    // Strip any number of trailing ".html" and redirect to canonical
+    let is_curl = is_curl(&headers);
+    // Strip any number of trailing ".html" for lookup; redirect only for non-curl
     let mut slug_clean = slug.clone();
     let mut stripped = false;
     while let Some(s) = slug_clean.strip_suffix(".html") {
         slug_clean = s.to_string();
         stripped = true;
         if slug_clean.is_empty() {
-            // e.g., "html.html" -> empty; reject
             return StatusCode::NOT_FOUND.into_response();
         }
     }
-    if stripped {
+    if stripped && !is_curl {
         let loc = format!("/blog/{slug_clean}");
         return Redirect::permanent(&loc).into_response();
     }
 
-    // If requested /blog/{slug}.typ, return raw Typst source
+    // If curl requests /blog/{slug}.typ or /blog/{slug}, return Typst source
     if let Some(stripped) = slug_clean.strip_suffix(".typ") {
         return raw_typ_response(stripped).await;
+    }
+    if is_curl && !slug.contains('.') {
+        return raw_typ_response(&slug_clean).await;
     }
 
     // If requested /blog/{slug}.md, return generated Markdown
@@ -159,6 +162,14 @@ fn client_ip_from_headers(headers: &HeaderMap) -> Option<String> {
         }
     }
     None
+}
+
+fn is_curl(headers: &HeaderMap) -> bool {
+    headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(|ua| ua.to_lowercase().contains("curl"))
+        .unwrap_or(false)
 }
 
 pub async fn profile_handler(
