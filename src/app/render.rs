@@ -57,6 +57,7 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
+  <link rel="preload" href="/assets/build/tailwind.css" as="style" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title}</title>
   {meta_tags}
@@ -71,8 +72,7 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="icon" href="/android-chrome-192x192.png" sizes="192x192" />
   <link rel="icon" href="/android-chrome-512x512.png" sizes="512x512" />
-  <link rel="preload" href="/assets/build/tailwind.css" as="style" />
-  <link rel="stylesheet" href="/assets/build/tailwind.css" media="print" data-unblock-css="1" />
+  <link rel="stylesheet" href="/assets/build/tailwind.css" />
   <script nonce="{CSP_NONCE_TOKEN}">
     const l=document.querySelector('link[data-unblock-css="1"]');
     if(l){{
