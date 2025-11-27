@@ -2,9 +2,8 @@
   const sticky = document.getElementById("fixed-header");
   const primary = document.getElementById("primary-header");
   if (sticky && primary) {
-    const threshold = primary.offsetHeight;
-    const show = () => {
-      const active = window.scrollY > threshold;
+    sticky.classList.remove("hidden");
+    const update = (active) => {
       sticky.classList.toggle("opacity-100", active);
       sticky.classList.toggle("translate-y-0", active);
       sticky.classList.toggle("pointer-events-auto", active);
@@ -12,9 +11,23 @@
       sticky.classList.toggle("-translate-y-3", !active);
       sticky.classList.toggle("pointer-events-none", !active);
     };
-    window.addEventListener("scroll", show, { passive: true });
-    show();
-    sticky.classList.remove("hidden");
+
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            update(!entry.isIntersecting);
+          });
+        },
+        { rootMargin: "0px", threshold: 0 }
+      );
+      observer.observe(primary);
+    } else {
+      const threshold = primary.offsetHeight;
+      const onScroll = () => update(window.scrollY > threshold);
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+    }
   }
 
   const THEME_KEY = "rodin-theme";
@@ -71,6 +84,7 @@
       btn.type = "button";
       btn.className = "code-copy-btn";
       btn.textContent = "Copy";
+      btn.ariaLabel = "コードをコピー";
       btn.addEventListener("click", () => {
         navigator.clipboard
           .writeText(code.innerText)
