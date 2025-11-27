@@ -323,7 +323,7 @@ fn build_article_structured_data(meta: &FrontMatter) -> Option<String> {
     let headline = meta
         .title
         .as_deref()
-        .unwrap_or_else(|| meta.slug.as_str())
+        .unwrap_or(meta.slug.as_str())
         .to_string();
 
     let description = meta

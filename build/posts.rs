@@ -273,7 +273,7 @@ fn estimate_reading_minutes(html: &str) -> u32 {
     let text = tag_re.replace_all(html, " ");
     let chars = text.chars().filter(|c| !c.is_whitespace()).count();
     let per_min = 500usize;
-    let mins = (chars + per_min - 1) / per_min;
+    let mins = chars.div_ceil(per_min);
     mins.max(1) as u32
 }
 
