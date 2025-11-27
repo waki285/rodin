@@ -48,6 +48,20 @@
   }
 }
 
+#let img(src, alt: "", lazy: false, width: none, height: none) = context {
+  if target() == "html" {
+    html.elem("img", attrs: (
+      src: src,
+      alt: alt,
+      width: if width != none { width } else { null },
+      height: if height != none { height } else { null },
+      loading: if lazy { "lazy" } else { "eager" },
+    ))
+  } else {
+    image(src, alt: alt, width: width)
+  }
+}
+
 
 // Inline SVG icons for callouts (HTML target only)
 #let callout-icon(kind) = {

@@ -185,7 +185,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                 <nav class="max-w-[1200px] w-full mx-auto flex items-center justify-between px-2 relative">
                     <div class="flex items-center gap-3">
                         <a class="flex items-center gap-2" href="/" aria-label="home">
-                            <img class="h-12 w-12 rounded-full" src="/assets/images/suzuneu.webp" alt="" />
+                            <img class="h-12 w-12 rounded-full" src="/assets/images/suzuneu.webp" alt="" width="48" height="48" />
                             <span class="text-2xl font-semibold tracking-wide">{title.clone()}</span>
                         </a>
                         <ShowIp subtitle=subtitle.clone() />
@@ -213,7 +213,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
             >
                 <nav class="max-w-[1200px] w-full mx-auto h-16 flex items-center justify-between px-2 header-surface text-white rounded-b-xl backdrop-blur">
                     <a class="flex items-center gap-2" href="/">
-                        <img class="h-12 w-12 rounded-full" src="/assets/images/suzuneu.webp" alt="" />
+                        <img class="h-12 w-12 rounded-full" src="/assets/images/suzuneu.webp" alt="" width="48" height="48" />
                         <span class="text-lg font-semibold">{title_clone}</span>
                     </a>
                     <ul class="hidden sm:flex items-center gap-4">
