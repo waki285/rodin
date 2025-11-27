@@ -1,0 +1,19 @@
+services:
+  rodin:
+    image: ghcr.io/waki285/rodin:latest
+    # build: .   # Uncomment to build locally instead of pulling
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - RUST_LOG=info
+      # Cloudflareなどのリバースプロキシ越しの場合、必要なら下記を有効化
+      # - TRUST_PROXY=1
+    restart: unless-stopped
+    # If you keep the service behind a reverse proxy, consider:
+    # networks:
+    #   - web
+
+# networks:
+#   web:
+#     external: true
