@@ -23,8 +23,9 @@ WORKDIR /app
 ENV RUSTC_WRAPPER=/usr/local/bin/sccache \
     SCCACHE_DIR=/sccache
 
-# cargo-chef for dependency caching
-RUN cargo install cargo-chef --locked
+# cargo-chef for dependency caching (prebuilt musl binary)
+RUN curl -L https://github.com/LukeMathWalker/cargo-chef/releases/download/v0.1.73/cargo-chef-x86_64-unknown-linux-musl.tar.gz \
+    | tar -xz -C /usr/local/bin cargo-chef
 
 ########################################
 # Planner: analyze dependencies
