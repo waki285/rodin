@@ -4,18 +4,16 @@
 #set figure(numbering: none)
 #set raw(theme: "github-dark.tmTheme")
 #show math.equation: it => context {
-  // HTML 出力のときだけ特別扱い
   if target() == "html" {
-    // インライン数式は box で包んで段落を分断しないようにする
+    // HTML で出ないのを直す
     show: if it.block { it => it } else { box }
-    html.frame(it) // 通常レイアウトで組んで SVG として埋め込む
+    html.frame(it)
   } else {
-    it // PDF などその他のターゲットはそのまま
+    it
   }
 }
 
-// quote に attribution を指定したとき HTML 出力で落ちるので、
-// attribution がある場合だけ独自レンダリングに差し替える。
+// quote attribution が出ないのをなおす
 #show quote: it => {
   if it.attribution == none {
     it
@@ -32,18 +30,15 @@
 }
 
 #show link: it => {
-  // PDF 等の「paged」ターゲットでは何もしない
   if target() != "html" {
     it
   } else if type(it.dest) == str and it.dest.starts-with("http") {
-    // URL 文字列のリンクだけを対象にする
     html.elem("a", attrs: (
       href: it.dest,
       target: "_blank",
       rel: "noopener noreferrer",
     ))[#it.body]
   } else {
-    // 内部リンクなどはそのまま
     it
   }
 }
@@ -63,7 +58,6 @@
 }
 
 
-// Inline SVG icons for callouts (HTML target only)
 #let callout-icon(kind) = {
   let common = (
     class: "callout-svg",
@@ -104,7 +98,6 @@
       #html.elem("div", attrs: (class: "callout-body"))[ #body ]
     ]
   } else {
-    // PDF 用レイアウト（ここは好きなように）
     block(
       fill: rgb("#fffbeb"),
       inset: 12pt,
@@ -121,10 +114,8 @@
 
 #let hr() = context {
   if target() == "html" {
-    // HTML のときだけ <hr> を出す
     html.elem("hr")
   } else {
-    // PDF / PNG / SVG では普通に線を引く
     line(length: 100%)
   }
 }

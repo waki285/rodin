@@ -126,7 +126,7 @@ async fn cache_headers_middleware(
         || path.ends_with(".md");
 
     if is_asset {
-        // fix missing/incorrect content-type (e.g., root-served files)
+        // ダウンロードされるのを直す
         let need_ct = res
             .headers()
             .get(axum::http::header::CONTENT_TYPE)
@@ -139,7 +139,7 @@ async fn cache_headers_middleware(
                         res.headers_mut()
                             .insert(axum::http::header::CONTENT_TYPE, val);
                     }
-                    // inlineで扱えるものは Content-Disposition を明示
+                    // inline で扱えるものは Content-Disposition を明示
                     if mime.starts_with("text/")
                         || mime.starts_with("image/")
                         || mime == "application/javascript"

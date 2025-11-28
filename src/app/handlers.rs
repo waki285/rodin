@@ -47,7 +47,7 @@ pub async fn blog_handler(
         return Redirect::permanent(&loc).into_response();
     }
 
-    // If curl requests /blog/{slug}.typ or /blog/{slug}, return Typst source
+    // curl が /blog/{slug}.typ か /blog/{slug} にリクエストしたら Typst ソースを返す
     if let Some(stripped) = slug_clean.strip_suffix(".typ") {
         return raw_typ_response(&state, stripped).await;
     }
@@ -55,7 +55,7 @@ pub async fn blog_handler(
         return raw_typ_response(&state, &slug_clean).await;
     }
 
-    // If requested /blog/{slug}.md, return generated Markdown
+    // /blog/{slug}.md にリクエストしたら Markdown ソースを返す
     if let Some(stripped) = slug_clean.strip_suffix(".md") {
         return markdown_response(&state, stripped).await;
     }
@@ -196,9 +196,8 @@ pub async fn pgp_handler(
     Html(html).into_response()
 }
 
-// Serve raw Typst source
 pub async fn raw_typ_response(state: &AppState, slug: &str) -> Response {
-    // reject directory traversal or hidden drafts
+    // 悪意駆動型人生を送っている人を防ぐ
     if slug.contains('/') || slug.starts_with('_') {
         return not_found_response().await;
     }
@@ -271,7 +270,6 @@ pub async fn not_found_response() -> Response {
     (StatusCode::NOT_FOUND, Html(html)).into_response()
 }
 
-// Middleware: add Referrer-Policy, CSP nonce, and reject overly long paths (path only, no query/fragment)
 pub async fn security_middleware(mut req: Request<Body>, next: Next) -> Response {
     let nonce = generate_nonce();
     req.extensions_mut().insert(nonce.clone());

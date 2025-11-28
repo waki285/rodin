@@ -20,7 +20,6 @@ const SEMIBOLD_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Semibold.subse
 const BOLD_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Bold.subset.ttf";
 const BOLD_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Bold.subset.woff2";
 
-// Files that contain literal text rendered with the site font.
 const TEXT_SOURCES: &[&str] = &[
     "src/app/handlers.rs",      // not_found_response HTML
     "src/components.rs",        // top/profile/blog chrome
@@ -80,7 +79,6 @@ fn collect_glyphs() -> Result<BTreeSet<char>> {
     }
     collect_from_content_dir("content", &mut set)?;
 
-    // Ensure common whitespace is always present.
     set.insert(' ');
     set.insert('\u{00A0}'); // non-breaking space
 
@@ -136,7 +134,6 @@ fn subset_font(src: &str, ttf_out: &str, woff2_out: &str, glyphs: &BTreeSet<char
 }
 
 fn compress_to_woff2(ttf_path: &str, woff2_path: &str) -> Result<()> {
-    // woff2_compress writes alongside the input; ensure dir exists.
     let ttf = PathBuf::from(ttf_path);
     if let Some(parent) = ttf.parent() {
         fs::create_dir_all(parent)
@@ -151,12 +148,10 @@ fn compress_to_woff2(ttf_path: &str, woff2_path: &str) -> Result<()> {
         anyhow::bail!("woff2_compress exited with {}", status);
     }
 
-    // The tool outputs <name>.woff2 next to the input.
     let produced = ttf.with_extension("woff2");
     if !produced.exists() {
         anyhow::bail!("woff2_compress did not produce {}", produced.display());
     }
-    // Rename/move to the expected output path if needed.
     let target = PathBuf::from(woff2_path);
     if produced != target {
         if let Some(parent) = target.parent() {

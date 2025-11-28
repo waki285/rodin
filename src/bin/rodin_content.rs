@@ -1,7 +1,5 @@
 use anyhow::Result;
 
-// Reuse the existing build-time helpers so we don't duplicate logic.
-// Paths are relative to this bin file (src/bin).
 #[path = "../../build/posts.rs"]
 mod posts;
 #[path = "../../build/markdown.rs"]

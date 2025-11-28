@@ -27,7 +27,7 @@ pub fn build_posts(preamble_path: &str, generated_dir: &str) -> Result<Vec<Front
             .and_then(|s| s.to_str())
             .unwrap()
             .to_string();
-        // Files beginning with "_" are ignored (drafts/partials)
+        // 下書きとかメタコンテンツとか
         if slug.starts_with('_') {
             continue;
         }
@@ -63,7 +63,7 @@ pub fn build_home(preamble_path: &str, generated_dir: &str) -> Result<()> {
     let raw = fs::read_to_string(&path)?;
     let body_clean = strip_preamble_import(&raw);
 
-    // Inject helpers: direct json load and pre-rendered HTML cards (built in Rust).
+    // typst 側での取得が面倒すぎるので Rust でやってプレースホルダーにぶち込む
     let index_path = PathBuf::from(generated_dir).join("index.json");
     let index_bytes = fs::read(&index_path)?;
     let metas: Vec<FrontMatter> = serde_json::from_slice(&index_bytes)?;
@@ -73,7 +73,6 @@ pub fn build_home(preamble_path: &str, generated_dir: &str) -> Result<()> {
     );
 
     let mut html = compile_typst(&preamble, &injected, &binaries)?;
-    // Replace placeholder (both bare text and wrapped in <p>) with pre-rendered cards HTML.
     html = html.replace("<p>POSTS_LIST_PLACEHOLDER</p>", &cards_html);
     html = html.replace("POSTS_LIST_PLACEHOLDER", &cards_html);
 
@@ -102,11 +101,9 @@ pub fn build_profile(preamble_path: &str, generated_dir: &str) -> Result<Option<
     let html_path = out_dir.join("profile.html");
     fs::write(&html_path, maybe_minify_html(html.clone()))?;
 
-    // enrich meta for runtime usage
     meta.html = "generated/profile.html".to_string();
     meta.reading_minutes = Some(estimate_reading_minutes(&html));
 
-    // persist meta for runtime renderer
     let meta_path = out_dir.join("profile_meta.json");
     fs::write(&meta_path, serde_json::to_string_pretty(&meta)?)?;
 
@@ -207,9 +204,7 @@ fn parse_front_matter(slug: &str, source: &str) -> (FrontMatter, String) {
         }
         body_lines.push(line);
     }
-    // Fill missing meta defaults from front matter and site-wide defaults.
     if let Some(title) = fm.title.as_ref() {
-        // Provide both standard and OG titles automatically when omitted.
         meta_map
             .entry("title".to_string())
             .or_insert_with(|| title.clone());
@@ -218,7 +213,7 @@ fn parse_front_matter(slug: &str, source: &str) -> (FrontMatter, String) {
             .or_insert_with(|| title.clone());
     }
 
-    // Site-wide defaults (apply only when absent).
+    // デフォルト.
     meta_map
         .entry("author".to_string())
         .or_insert_with(|| "すずねーう".to_string());
@@ -238,7 +233,6 @@ fn parse_front_matter(slug: &str, source: &str) -> (FrontMatter, String) {
         .entry("og:type".to_string())
         .or_insert_with(|| "article".to_string());
 
-    // Derive article:published_time from `date:` when provided and not explicitly set.
     if !meta_map.contains_key("article:published_time") {
         if let Some(date) = fm.published_at.as_ref() {
             let derived = if date.contains('T') {
@@ -366,7 +360,6 @@ fn load_binary_assets() -> Result<Vec<(String, Vec<u8>)>> {
         }
     }
 
-    // Add other assets
     let other_assets = vec![
         (
             "github-light.tmTheme".to_string(),
@@ -380,7 +373,6 @@ fn load_binary_assets() -> Result<Vec<(String, Vec<u8>)>> {
 
     bins.extend(other_assets);
 
-    // Allow Typst to read generated index.json when building _home.typ.
     let gen_index = PathBuf::from("static/generated/index.json");
     if gen_index.exists() {
         if let Ok(bytes) = fs::read(&gen_index) {

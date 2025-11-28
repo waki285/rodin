@@ -300,12 +300,11 @@ pub(crate) fn inject_runtime_tokens(template: &str, client_ip: &str, nonce: &str
 fn render_meta_tags(meta: &HashMap<String, String>) -> String {
     meta.iter()
         .map(|(k, v)| {
-            // Allow link tags via the "link:<rel>" key convention.
             if let Some(rel) = k.strip_prefix("link:") {
                 return format!(r#"<link rel="{rel}" href="{v}" />"#);
             }
 
-            // Open Graph / Facebook / Article namespaces use the "property" attribute.
+            // Open Graph / Facebook / Article は property
             let attr = if k.starts_with("og:") || k.starts_with("fb:") || k.starts_with("article:")
             {
                 "property"

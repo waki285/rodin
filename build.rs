@@ -12,7 +12,6 @@ mod posts;
 mod sitemap;
 #[path = "build/tailwind.rs"]
 mod tailwind;
-// Reuse the runtime FrontMatter definition to avoid duplication.
 #[path = "src/frontmatter.rs"]
 mod frontmatter;
 
@@ -29,7 +28,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // expose git hash for ETag
+    // ETag
     let git_hash = std::process::Command::new("git")
         .args(["rev-parse", "--short", "HEAD"])
         .output()
@@ -55,7 +54,6 @@ fn main() -> Result<()> {
     println!("cargo:rerun-if-changed={PREAMBLE_PATH}");
     println!("cargo:rerun-if-changed={PANDOC_FILTER}");
 
-    // default: markdown disabled; flip to true only if generation succeeds
     println!("cargo:rustc-env={MARKDOWN_ENV_KEY}=false");
 
     tailwind::build_tailwind();
@@ -73,7 +71,7 @@ fn main() -> Result<()> {
         }
     }
     markdown::write_index(&metas, GENERATED_DIR)?;
-    // Build home after index.json exists so Typst can read metadata.
+    // index.json を読むのでこの順
     posts::build_home(PREAMBLE_PATH, GENERATED_DIR)?;
     posts::build_profile(PREAMBLE_PATH, GENERATED_DIR)?;
     let pgp_meta = posts::build_pgp(PREAMBLE_PATH, GENERATED_DIR)?;
