@@ -26,7 +26,7 @@ pub fn BlogPage(
                 subtitle=format!("{client_ip}")
                 current_path=current_path.clone()
             />
-            <main class="mx-auto max-w-3xl p-6 prose dark:prose-invert space-y-3">
+            <main class="mx-auto max-w-3xl p-6 prose dark:prose-invert space-y-3" style="content-visibility:auto;contain-intrinsic-size:1200px 3200px;">
                 {(!crumbs.is_empty()).then(|| {
                     let last = crumbs.len().saturating_sub(1);
                     view! {
@@ -80,30 +80,30 @@ pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> im
                     <source
                         type="image/avif"
                         srcset="/assets/images/urumashi/urumashi-1280.avif 1280w, /assets/images/urumashi/urumashi-1920.avif 1920w, /assets/images/urumashi/urumashi-2560.avif 2560w"
-                        sizes="100vw"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
                     />
                     <source
                         type="image/webp"
                         srcset="/assets/images/urumashi/urumashi-1280.webp 1280w, /assets/images/urumashi/urumashi-1920.webp 1920w, /assets/images/urumashi/urumashi-2560.webp 2560w"
-                        sizes="100vw"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
                     />
                     <img
                         src="/assets/images/urumashi/urumashi-1280.jpg"
                         srcset="/assets/images/urumashi/urumashi-1280.jpg 1280w, /assets/images/urumashi/urumashi-1920.jpg 1920w, /assets/images/urumashi/urumashi-2560.jpg 2560w"
-                        sizes="100vw"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
                         width="2560"
                         height="1920"
                         alt=""
                         class="h-screen w-screen object-cover object-[80%_center]"
                         loading="eager"
                         decoding="async"
-                        fetchpriority="high"
+                        fetchpriority="low"
                     />
                 </picture>
-                <div class="absolute inset-0 bg-black/50"></div>
+                <div class="absolute inset-0 bg-black/50" style="contain:paint;"></div>
             </div>
 
-            <div class="relative z-10 min-h-screen flex flex-col">
+            <div class="relative z-10 min-h-screen flex flex-col" style="contain:paint;">
                 <div class="absolute inset-x-0 top-0">
                     <HeaderBar
                         title="すずねーう".to_string()
@@ -112,7 +112,7 @@ pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> im
                     />
                 </div>
                 <div class="flex-1 flex items-center justify-center px-6 min-h-screen">
-                    <div class="bg-white/90 text-slate-900 rounded-2xl shadow-2xl px-8 py-10 max-w-md w-full backdrop-blur">
+                    <div class="bg-white/90 text-slate-900 rounded-2xl shadow-xl px-8 py-10 max-w-md w-full backdrop-blur">
                         <div class="flex justify-center mb-6">
                             <div class="h-20 w-20 rounded-full flex items-center justify-center shadow-lg">
                                 <img src="/assets/images/suzuneu.webp" alt="icon" class="h-20 w-20 object-cover rounded-full" />
@@ -139,7 +139,7 @@ pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> im
                     </div>
                 </div>
 
-                <main class="w-full bg-[var(--color-surface)] text-[var(--color-ink)]">
+                <main class="w-full bg-[var(--color-surface)] text-[var(--color-ink)]" style="content-visibility:auto;contain-intrinsic-size:1200px 3200px;">
                     <div class="mx-auto max-w-3xl px-6 py-12 space-y-8">
                         <article class="prose dark:prose-invert" inner_html=home_html></article>
                     </div>
