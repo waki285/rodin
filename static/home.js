@@ -48,6 +48,13 @@
   };
 
   const deferBackgroundUntilAfterLCP = () => {
+    // If the script loads after window.load (it does, because we defer import),
+    // LCP is already recorded—just load immediately.
+    if (document.readyState === "complete") {
+      loadDeferredBackground();
+      return;
+    }
+
     let fired = false;
     const trigger = () => {
       if (fired) return;
