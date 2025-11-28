@@ -137,7 +137,7 @@ pub(crate) fn prerender_blog_page(meta: &FrontMatter, html_content: &str) -> Str
     if let Some(bc) = build_breadcrumb_structured_data(
         meta,
         &format!("/blog/{}", meta.slug),
-        meta.title.as_deref().unwrap_or_else(|| meta.slug.as_str()),
+        meta.title.as_deref().unwrap_or(meta.slug.as_str()),
     ) {
         structured_vec.push(bc);
     }
