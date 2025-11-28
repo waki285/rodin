@@ -8,7 +8,7 @@ FROM rust:slim AS builder-base
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential pkg-config libssl-dev ca-certificates curl git pandoc \
-        woff2 libharfbuzz-dev nodejs npm && \
+        woff2 libharfbuzz-dev nodejs npm clang libclang-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # sccache

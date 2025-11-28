@@ -26,6 +26,7 @@ const TEXT_SOURCES: &[&str] = &[
     "src/components.rs",        // top/profile/blog chrome
     "src/components/search.rs", // search page strings
     "static/app.js",            // UI strings in client JS
+    "static/preamble.typ",      // preamble for typst
 ];
 
 pub fn subset_regular_font() -> Result<()> {
