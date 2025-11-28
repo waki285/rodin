@@ -3,7 +3,7 @@ pub mod render;
 mod state;
 
 use axum::http::HeaderValue;
-use std::{convert::Infallible, env};
+use std::{convert::Infallible, env, sync::OnceLock};
 
 use axum::routing::get_service;
 use axum::{middleware, routing::get, Router};
@@ -22,15 +22,23 @@ pub(crate) fn markdown_enabled() -> bool {
     )
 }
 
+fn env_flag(key: &str, default: bool) -> bool {
+    env::var(key)
+        .map(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "on" | "ON" | "yes" | "YES"))
+        .unwrap_or(default)
+}
+
 pub async fn run() -> anyhow::Result<()> {
     let app_state = state::build_prerendered_state().await?;
+
+    let compression_enabled = env_flag("COMPRESSION_ENABLED", true);
 
     let static_root = ServeDir::new("static/root").fallback(service_fn(|_req| async move {
         let res = handlers::not_found_response().await;
         Ok::<_, Infallible>(res)
     }));
 
-    let app = Router::new()
+    let mut app = Router::new()
         .route("/", get(handlers::index_handler))
         .route("/profile", get(handlers::profile_handler))
         .route("/pgp", get(handlers::pgp_handler))
@@ -42,10 +50,13 @@ pub async fn run() -> anyhow::Result<()> {
         )
         .nest_service("/assets", ServeDir::new("static"))
         .fallback_service(get_service(static_root))
-        .layer(CompressionLayer::new())
-        .layer(middleware::from_fn(handlers::security_middleware))
-        .layer(middleware::from_fn(cache_headers_middleware))
         .with_state(app_state);
+
+    if compression_enabled {
+        app = app.layer(CompressionLayer::new());
+    }
+    app = app.layer(middleware::from_fn(handlers::security_middleware));
+    app = app.layer(middleware::from_fn(cache_headers_middleware));
 
     let bind = env::var("BIND_ADDRESS").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = env::var("PORT")
@@ -85,14 +96,14 @@ async fn cache_headers_middleware(
     req: axum::http::Request<axum::body::Body>,
     next: middleware::Next,
 ) -> axum::http::Response<axum::body::Body> {
-    let cache_enabled = env::var("CACHE_ENABLED")
-        .map(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "on" | "ON"))
-        .unwrap_or(false);
+    static CACHE_ENABLED: OnceLock<bool> = OnceLock::new();
+    let cache_enabled = *CACHE_ENABLED.get_or_init(|| env_flag("CACHE_ENABLED", false));
+    if !cache_enabled {
+        return next.run(req).await;
+    }
+
     let path = req.uri().path().to_ascii_lowercase();
     let mut res = next.run(req).await;
-    if !cache_enabled {
-        return res;
-    }
 
     let is_asset = path.starts_with("/assets/")
         || path.ends_with(".css")

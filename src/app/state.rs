@@ -19,6 +19,7 @@ pub struct AppState {
     pub(crate) prerender_pgp: Arc<str>,
     pub(crate) blog_pages: Arc<HashMap<String, Arc<str>>>,
     pub(crate) blog_markdowns: Arc<HashMap<String, Arc<str>>>,
+    pub(crate) blog_typs: Arc<HashMap<String, Arc<str>>>,
     pub(crate) search_index: Arc<Vec<SearchIndexEntry>>,
 }
 
@@ -47,6 +48,7 @@ pub async fn build_prerendered_state() -> anyhow::Result<AppState> {
 
     let mut blog_pages = HashMap::new();
     let mut blog_markdowns = HashMap::new();
+    let mut blog_typs = HashMap::new();
     let mut search_entries = Vec::new();
     for meta in metas {
         let slug = meta.slug.clone();
@@ -54,6 +56,11 @@ pub async fn build_prerendered_state() -> anyhow::Result<AppState> {
         let html_content = fs::read_to_string(&html_path).await?;
         let prerendered = Arc::<str>::from(prerender_blog_page(&meta, &html_content));
         blog_pages.insert(slug.clone(), prerendered);
+
+        let typ_path = PathBuf::from("content").join(format!("{slug}.typ"));
+        if let Ok(src) = fs::read_to_string(&typ_path).await {
+            blog_typs.insert(slug.clone(), Arc::<str>::from(src));
+        }
 
         if markdown_enabled() {
             if let Some(md_rel) = meta.markdown.as_ref() {
@@ -114,6 +121,7 @@ pub async fn build_prerendered_state() -> anyhow::Result<AppState> {
         prerender_pgp: pgp,
         blog_pages: Arc::new(blog_pages),
         blog_markdowns: Arc::new(blog_markdowns),
+        blog_typs: Arc::new(blog_typs),
         search_index: Arc::new(search_entries),
     })
 }

@@ -5,11 +5,13 @@ use axum::{
     middleware::Next,
     response::{Html, IntoResponse, Redirect, Response},
 };
-use std::{env, net::SocketAddr, path::PathBuf};
-use tokio::fs;
+use std::{env, net::SocketAddr};
 
 use super::{markdown_enabled, render::inject_runtime_tokens, state::AppState};
 use crate::app::render::{render_search_page, SearchHit};
+
+const CSP_PREFIX: &str = "default-src 'self'; script-src 'self' 'nonce-";
+const CSP_SUFFIX: &str = "' static.cloudflareinsights.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; require-trusted-types-for 'script'";
 
 pub async fn index_handler(
     State(state): State<AppState>,
@@ -47,10 +49,10 @@ pub async fn blog_handler(
 
     // If curl requests /blog/{slug}.typ or /blog/{slug}, return Typst source
     if let Some(stripped) = slug_clean.strip_suffix(".typ") {
-        return raw_typ_response(stripped).await;
+        return raw_typ_response(&state, stripped).await;
     }
     if is_curl && !slug.contains('.') {
-        return raw_typ_response(&slug_clean).await;
+        return raw_typ_response(&state, &slug_clean).await;
     }
 
     // If requested /blog/{slug}.md, return generated Markdown
@@ -195,22 +197,21 @@ pub async fn pgp_handler(
 }
 
 // Serve raw Typst source
-pub async fn raw_typ_response(slug: &str) -> Response {
+pub async fn raw_typ_response(state: &AppState, slug: &str) -> Response {
     // reject directory traversal or hidden drafts
     if slug.contains('/') || slug.starts_with('_') {
         return not_found_response().await;
     }
-    let path = PathBuf::from("content").join(format!("{slug}.typ"));
-    match fs::read_to_string(&path).await {
-        Ok(src) => (
+    match state.blog_typs.get(slug) {
+        Some(src) => (
             [(
                 axum::http::header::CONTENT_TYPE,
                 "text/vnd.typst; charset=utf-8",
             )],
-            src,
+            src.as_ref().to_string(),
         )
             .into_response(),
-        Err(_) => not_found_response().await,
+        None => not_found_response().await,
     }
 }
 
@@ -298,10 +299,10 @@ pub async fn security_middleware(mut req: Request<Body>, next: Next) -> Response
         axum::http::header::X_CONTENT_TYPE_OPTIONS,
         HeaderValue::from_static("nosniff"),
     );
-    let csp = format!(
-        "default-src 'self'; script-src 'self' 'nonce-{}' static.cloudflareinsights.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; require-trusted-types-for 'script'",
-        nonce
-    );
+    let mut csp = String::with_capacity(CSP_PREFIX.len() + nonce.len() + CSP_SUFFIX.len());
+    csp.push_str(CSP_PREFIX);
+    csp.push_str(&nonce);
+    csp.push_str(CSP_SUFFIX);
     if let Ok(val) = HeaderValue::from_str(&csp) {
         res_headers.insert(axum::http::header::CONTENT_SECURITY_POLICY, val);
     }
