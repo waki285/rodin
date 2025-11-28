@@ -272,16 +272,16 @@ pub async fn security_middleware(mut req: Request<Body>, next: Next) -> Response
     let mut res = next.run(req).await;
     let res_headers = res.headers_mut();
     res_headers.insert(
-        "Referrer-Policy",
+        axum::http::header::REFERRER_POLICY,
         HeaderValue::from_static("strict-origin-when-cross-origin"),
     );
     res_headers.insert(
-        "Strict-Transport-Security",
+        axum::http::header::STRICT_TRANSPORT_SECURITY,
         HeaderValue::from_static("max-age=31536000; includeSubDomains; preload"),
     );
-    res_headers.insert("X-Frame-Options", HeaderValue::from_static("SAMEORIGIN"));
+    res_headers.insert(axum::http::header::X_FRAME_OPTIONS, HeaderValue::from_static("SAMEORIGIN"));
     res_headers.insert(
-        "X-Content-Type-Options",
+        axum::http::header::X_CONTENT_TYPE_OPTIONS,
         HeaderValue::from_static("nosniff"),
     );
     let csp = format!(
@@ -289,7 +289,7 @@ pub async fn security_middleware(mut req: Request<Body>, next: Next) -> Response
         nonce
     );
     if let Ok(val) = HeaderValue::from_str(&csp) {
-        res_headers.insert("Content-Security-Policy", val);
+        res_headers.insert(axum::http::header::CONTENT_SECURITY_POLICY, val);
     }
     res_headers.insert(
         "X-Permitted-Cross-Domain-Policies",
