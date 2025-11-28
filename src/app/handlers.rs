@@ -183,6 +183,17 @@ pub async fn profile_handler(
     Html(html).into_response()
 }
 
+pub async fn pgp_handler(
+    State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Extension(nonce): Extension<String>,
+) -> Response {
+    let client_ip = client_ip_from_headers(&headers).unwrap_or_else(|| addr.ip().to_string());
+    let html = inject_runtime_tokens(&state.prerender_pgp, &client_ip, &nonce);
+    Html(html).into_response()
+}
+
 // Serve raw Typst source
 pub async fn raw_typ_response(slug: &str) -> Response {
     // reject directory traversal or hidden drafts

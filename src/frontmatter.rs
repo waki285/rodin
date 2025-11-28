@@ -7,6 +7,8 @@ pub struct FrontMatter {
     pub subtitle: Option<String>,
     pub genre: Option<String>,
     pub tags: Vec<String>,
+    #[serde(default)]
+    pub breadcrumbs: Vec<String>,
     pub published_at: Option<String>,
     pub updated_at: Option<String>,
     pub slug: String,

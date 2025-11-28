@@ -2,9 +2,14 @@ use crate::frontmatter::FrontMatter;
 use anyhow::Result;
 use std::{fs, path::Path};
 
-pub fn write_sitemap(metas: &[FrontMatter], site_url: &str, output_path: &str) -> Result<()> {
+pub fn write_sitemap(
+    metas: &[FrontMatter],
+    pgp_meta: Option<&FrontMatter>,
+    site_url: &str,
+    output_path: &str,
+) -> Result<()> {
     let homepage_lastmod = latest_lastmod(metas);
-    let mut urls = Vec::with_capacity(metas.len() + 2);
+    let mut urls = Vec::with_capacity(metas.len() + 3);
     urls.push(SitemapEntry {
         loc: format!("{site_url}/"),
         lastmod: homepage_lastmod.clone(),
@@ -13,6 +18,17 @@ pub fn write_sitemap(metas: &[FrontMatter], site_url: &str, output_path: &str) -
         loc: format!("{site_url}/profile"),
         lastmod: homepage_lastmod.clone(),
     });
+    if let Some(pm) = pgp_meta {
+        let lastmod = pm
+            .updated_at
+            .as_ref()
+            .or(pm.published_at.as_ref())
+            .map(|s| s.trim().to_string());
+        urls.push(SitemapEntry {
+            loc: format!("{site_url}/pgp"),
+            lastmod,
+        });
+    }
 
     for meta in metas {
         let loc = format!("{site_url}/blog/{}", meta.slug);

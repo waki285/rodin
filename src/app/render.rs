@@ -134,6 +134,13 @@ pub(crate) fn prerender_blog_page(meta: &FrontMatter, html_content: &str) -> Str
     if let Some(a) = build_article_structured_data(meta) {
         structured_vec.push(a);
     }
+    if let Some(bc) = build_breadcrumb_structured_data(
+        meta,
+        &format!("/blog/{}", meta.slug),
+        meta.title.as_deref().unwrap_or_else(|| meta.slug.as_str()),
+    ) {
+        structured_vec.push(bc);
+    }
     let mut meta_map = meta.meta.clone();
     meta_map
         .entry("link:canonical".to_string())
@@ -185,14 +192,75 @@ pub(crate) fn prerender_profile_page(meta: &FrontMatter, profile_html: &str) -> 
         .to_html()
     });
 
+    let mut structured = vec![build_site_structured_data()];
+    if let Some(bc) = build_breadcrumb_structured_data(meta, "/profile", "プロフィール") {
+        structured.push(bc);
+    }
     let opts = HtmlOptions {
         meta: Some(meta_map),
-        structured_data: Some(vec![build_site_structured_data()]),
+        structured_data: Some(structured),
         ..Default::default()
     };
     maybe_minify(wrap_html_with_options(
         &rendered,
         "プロフィール｜すずねーう",
+        &opts,
+    ))
+}
+
+pub(crate) fn prerender_static_page(
+    meta: &FrontMatter,
+    body_html: &str,
+    path: &str,
+    page_title: &str,
+) -> String {
+    let mut meta_map = meta.meta.clone();
+    meta_map
+        .entry("link:canonical".to_string())
+        .or_insert_with(|| format!("{SITE_URL}{}", path));
+    let fallback_desc = meta_map
+        .get("description")
+        .or_else(|| meta_map.get("og:description"))
+        .cloned()
+        .unwrap_or_default();
+    meta_map
+        .entry("description".to_string())
+        .or_insert_with(|| fallback_desc.clone());
+    meta_map
+        .entry("og:description".to_string())
+        .or_insert_with(|| fallback_desc.clone());
+    meta_map
+        .entry("og:title".to_string())
+        .or_insert_with(|| page_title.to_string());
+
+    let rendered = Owner::new_root(None).with(|| {
+        view! {
+            <BlogPage
+                client_ip=CLIENT_IP_TOKEN.to_string()
+                html_content=body_html.to_string()
+                meta={
+                    let mut m = meta.clone();
+                    m.meta = meta_map.clone();
+                    m
+                }
+                current_path=path.to_string()
+            />
+        }
+        .to_html()
+    });
+
+    let mut structured = vec![build_site_structured_data()];
+    if let Some(bc) = build_breadcrumb_structured_data(meta, path, page_title) {
+        structured.push(bc);
+    }
+    let opts = HtmlOptions {
+        meta: Some(meta_map),
+        structured_data: Some(structured),
+        ..Default::default()
+    };
+    maybe_minify(wrap_html_with_options(
+        &rendered,
+        &format!("{page_title}｜すずねーう"),
         &opts,
     ))
 }
@@ -316,6 +384,59 @@ fn build_homepage_structured_data() -> String {
         "primaryImageOfPage": format!("{SITE_URL}/android-chrome-192x192.png")
     })
     .to_string()
+}
+
+fn build_breadcrumb_structured_data(
+    meta: &FrontMatter,
+    path: &str,
+    page_title: &str,
+) -> Option<String> {
+    if meta.breadcrumbs.is_empty() {
+        return None;
+    }
+    let registry = breadcrumb_registry();
+    let mut items = Vec::new();
+    let mut pos = 1;
+    for (idx, key) in meta.breadcrumbs.iter().enumerate() {
+        let is_last = idx == meta.breadcrumbs.len() - 1;
+        if is_last {
+            // Last: always use current title.
+            let name = page_title.to_string();
+            items.push(json!({
+                "@type": "ListItem",
+                "position": pos,
+                "name": name,
+                "item": absolute_url(path),
+            }));
+        } else if let Some((name, url)) = registry.get(key.as_str()) {
+            items.push(json!({
+                "@type": "ListItem",
+                "position": pos,
+                "name": name,
+                "item": absolute_url(url),
+            }));
+        }
+        pos += 1;
+    }
+
+    Some(
+        json!({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": items
+        })
+        .to_string(),
+    )
+}
+
+pub(crate) fn breadcrumb_registry(
+) -> std::collections::HashMap<&'static str, (&'static str, &'static str)> {
+    let mut m = std::collections::HashMap::new();
+    m.insert("home", ("ホーム", "/"));
+    m.insert("profile", ("プロフィール", "/profile"));
+    m.insert("blog", ("ブログ", "/blog"));
+    m.insert("rust", ("Rust", "/tags/rust"));
+    m
 }
 
 fn build_article_structured_data(meta: &FrontMatter) -> Option<String> {

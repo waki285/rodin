@@ -76,7 +76,9 @@ fn main() -> Result<()> {
     // Build home after index.json exists so Typst can read metadata.
     posts::build_home(PREAMBLE_PATH, GENERATED_DIR)?;
     posts::build_profile(PREAMBLE_PATH, GENERATED_DIR)?;
-    sitemap::write_sitemap(&metas, SITE_URL, SITEMAP_PATH)?;
+    let pgp_meta = posts::build_pgp(PREAMBLE_PATH, GENERATED_DIR)?;
+    let pgp_meta_ref = pgp_meta.as_ref();
+    sitemap::write_sitemap(&metas, pgp_meta_ref, SITE_URL, SITEMAP_PATH)?;
     Ok(())
 }
 

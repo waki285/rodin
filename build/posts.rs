@@ -114,6 +114,39 @@ pub fn build_profile(preamble_path: &str, generated_dir: &str) -> Result<Option<
     Ok(Some(meta))
 }
 
+pub fn build_pgp(preamble_path: &str, generated_dir: &str) -> Result<Option<FrontMatter>> {
+    let path = PathBuf::from("content/_pgp.typ");
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let out_dir = PathBuf::from(generated_dir);
+    fs::create_dir_all(&out_dir)?;
+
+    let binaries = load_binary_assets()?;
+    let preamble = load_preamble(preamble_path);
+    let raw = fs::read_to_string(&path)?;
+    let (mut meta, body) = parse_front_matter("_pgp", &raw);
+    let body_clean = strip_preamble_import(&body);
+
+    let html = compile_typst(&preamble, &body_clean, &binaries)?;
+    let html_path = out_dir.join("pgp.html");
+    fs::write(&html_path, maybe_minify_html(html.clone()))?;
+
+    meta.html = "generated/pgp.html".to_string();
+    meta.reading_minutes = Some(estimate_reading_minutes(&html));
+    meta.slug = "pgp".to_string();
+    meta.meta
+        .entry("link:canonical".to_string())
+        .or_insert_with(|| "https://suzuneu.com/pgp".to_string());
+
+    let meta_path = out_dir.join("pgp_meta.json");
+    fs::write(&meta_path, serde_json::to_string_pretty(&meta)?)?;
+
+    println!("cargo:warning=generated pgp page");
+    Ok(Some(meta))
+}
+
 fn parse_front_matter(slug: &str, source: &str) -> (FrontMatter, String) {
     let mut fm = FrontMatter {
         slug: slug.to_string(),
@@ -138,6 +171,14 @@ fn parse_front_matter(slug: &str, source: &str) -> (FrontMatter, String) {
             }
             if let Some(val) = trimmed.strip_prefix("tags:") {
                 fm.tags = val
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                continue;
+            }
+            if let Some(val) = trimmed.strip_prefix("breadcrumbs:") {
+                fm.breadcrumbs = val
                     .split(',')
                     .map(|s| s.trim().to_string())
                     .filter(|s| !s.is_empty())

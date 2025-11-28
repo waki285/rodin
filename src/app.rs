@@ -33,6 +33,7 @@ pub async fn run() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/", get(handlers::index_handler))
         .route("/profile", get(handlers::profile_handler))
+        .route("/pgp", get(handlers::pgp_handler))
         .route("/blog/{slug}", get(handlers::blog_handler))
         .route("/search", get(handlers::search_handler))
         .route_service(

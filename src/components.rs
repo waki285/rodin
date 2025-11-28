@@ -17,6 +17,8 @@ pub fn BlogPage(
         .clone()
         .unwrap_or_else(|| "すずねーう".to_string());
     let subtitle_view = meta.subtitle.clone().unwrap_or_default();
+    let crumbs = meta.breadcrumbs.clone();
+    let registry = crate::app::render::breadcrumb_registry();
     view! {
         <div class="min-h-screen bg-surface text-ink">
             <HeaderBar
@@ -25,6 +27,34 @@ pub fn BlogPage(
                 current_path=current_path.clone()
             />
             <main class="mx-auto max-w-3xl p-6 prose dark:prose-invert space-y-3">
+                {(!crumbs.is_empty()).then(|| {
+                    let last = crumbs.len().saturating_sub(1);
+                    view! {
+                        <nav aria-label="breadcrumb" class="not-prose mb-2 text-sm text-slate-500 dark:text-slate-400">
+                            <ol class="flex flex-wrap items-center gap-1">
+                                {crumbs.iter().enumerate().map(|(idx, key)| {
+                                    let is_last = idx == last;
+                                    let (label, href_opt) = registry
+                                        .get(key.as_str())
+                                        .map(|(n, h)| (n.to_string(), Some(*h)))
+                                        .unwrap_or_else(|| (key.clone(), None));
+                                    view! {
+                                        <li class="flex items-center gap-1">
+                                            {if is_last {
+                                                view! { <span class="font-semibold text-slate-700 dark:text-slate-200">{label.clone()}</span> }.into_any()
+                                            } else {
+                                                view! {
+                                                    <a href={href_opt.unwrap_or("#")} class="hover:text-slate-700 dark:hover:text-slate-200">{label.clone()}</a>
+                                                }.into_any()
+                                            }}
+                                            {view! { <span class="text-slate-400">/</span> }.into_any()}
+                                        </li>
+                                    }
+                                }).collect_view()}
+                            </ol>
+                        </nav>
+                    }
+                })}
                 <div class="space-y-1 mb-[0.888889em]">
                     <h1 class="text-3xl font-bold mb-0">{article_title}</h1>
                     <ShowSubtitle text=subtitle_view />

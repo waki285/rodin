@@ -7,13 +7,16 @@ use crate::frontmatter::FrontMatter;
 
 use super::{
     markdown_enabled,
-    render::{prerender_blog_page, prerender_profile_page, prerender_top_page},
+    render::{
+        prerender_blog_page, prerender_profile_page, prerender_static_page, prerender_top_page,
+    },
 };
 
 #[derive(Clone)]
 pub struct AppState {
     pub(crate) prerender_top: Arc<str>,
     pub(crate) prerender_profile: Arc<str>,
+    pub(crate) prerender_pgp: Arc<str>,
     pub(crate) blog_pages: Arc<HashMap<String, Arc<str>>>,
     pub(crate) blog_markdowns: Arc<HashMap<String, Arc<str>>>,
     pub(crate) search_index: Arc<Vec<SearchIndexEntry>>,
@@ -36,6 +39,8 @@ pub async fn build_prerendered_state() -> anyhow::Result<AppState> {
     let home_path = base.join("home.html");
     let profile_path = base.join("profile.html");
     let profile_meta_path = base.join("profile_meta.json");
+    let pgp_path = base.join("pgp.html");
+    let pgp_meta_path = base.join("pgp_meta.json");
 
     let index_bytes = fs::read(&meta_path).await?;
     let metas: Vec<FrontMatter> = serde_json::from_slice(&index_bytes)?;
@@ -86,10 +91,27 @@ pub async fn build_prerendered_state() -> anyhow::Result<AppState> {
             ..Default::default()
         });
     let profile = Arc::<str>::from(prerender_profile_page(&profile_meta, &profile_html));
+    let pgp_meta: FrontMatter = fs::read_to_string(&pgp_meta_path)
+        .await
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(|| FrontMatter {
+            title: Some("PGP 公開鍵".to_string()),
+            slug: "pgp".to_string(),
+            ..Default::default()
+        });
+    let pgp_html = fs::read_to_string(&pgp_path).await.unwrap_or_default();
+    let pgp = Arc::<str>::from(prerender_static_page(
+        &pgp_meta,
+        &pgp_html,
+        "/pgp",
+        "PGP 公開鍵",
+    ));
 
     Ok(AppState {
         prerender_top: top,
         prerender_profile: profile,
+        prerender_pgp: pgp,
         blog_pages: Arc::new(blog_pages),
         blog_markdowns: Arc::new(blog_markdowns),
         search_index: Arc::new(search_entries),
