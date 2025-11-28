@@ -72,6 +72,29 @@
     });
   });
 
+  // Close nav menus when clicking outside or selecting a link (mobile)
+  const navToggles = [
+    document.getElementById("nav-toggle-main"),
+    document.getElementById("nav-toggle-fixed"),
+  ].filter((x) => x);
+
+  const closeMenus = () => navToggles.forEach((chk) => (chk.checked = false));
+
+  document.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    const menuContainers = [
+      document.getElementById("primary-header"),
+      document.getElementById("fixed-header"),
+    ].filter((x) => x);
+    const inside = menuContainers.some((c) => c && c.contains(target));
+    if (!inside) closeMenus();
+  });
+
+  document.querySelectorAll("#primary-header a, #fixed-header a").forEach((a) => {
+    a.addEventListener("click", () => closeMenus());
+  });
+
   // Add copy buttons to code blocks
   const initCopyButtons = () => {
     document.querySelectorAll("pre code").forEach((code) => {
