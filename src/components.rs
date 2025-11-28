@@ -94,7 +94,7 @@ pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> im
                         width="2560"
                         height="1920"
                         alt=""
-                        class="h-screen w-screen object-cover"
+                        class="h-screen w-screen object-cover object-[80%_center]"
                         loading="eager"
                         decoding="async"
                         fetchpriority="high"
