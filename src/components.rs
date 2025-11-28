@@ -190,20 +190,49 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                         </a>
                         <ShowIp subtitle=subtitle.clone() />
                     </div>
-                    <ul class="hidden sm:flex items-center gap-4">
-                        <li><a class=if home_active { active_cls } else { inactive_cls } href="/">"ホーム"</a></li>
-                        <li><a class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
-                        <li><a class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
-                        <li>
-                            <button
-                                class="theme-toggle inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-0 h-9 w-9 bg-transparent hover:text-white/80"
-                                type="button"
-                                aria-label="テーマ変更"
-                            >
-                                <ThemeIcon />
-                            </button>
-                        </li>
-                    </ul>
+                    <div class="flex items-center gap-2">
+                        <input id="nav-toggle-main" type="checkbox" class="peer/nav hidden" />
+                        <label
+                            for="nav-toggle-main"
+                            class="sm:hidden inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/20 bg-white/10 hover:bg-white/20 transition-colors dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                            aria-label="メニューを開く"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </label>
+                        <ul class="hidden sm:flex items-center gap-4">
+                            <li><a class=if home_active { active_cls } else { inactive_cls } href="/">"ホーム"</a></li>
+                            <li><a class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
+                            <li><a class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
+                            <li>
+                                <button
+                                    class="theme-toggle inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-0 h-9 w-9 bg-transparent hover:text-white/80"
+                                    type="button"
+                                    aria-label="テーマ変更"
+                                >
+                                    <ThemeIcon />
+                                </button>
+                            </li>
+                        </ul>
+                        <div class="peer-checked/nav:block hidden sm:hidden absolute right-2 top-14 bg-white text-slate-900 rounded-lg shadow-lg border border-slate-200 w-44 z-50 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">
+                            <ul class="flex flex-col divide-y divide-slate-200 dark:divide-slate-700">
+                                <li><a class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/">ホーム</a></li>
+                                <li><a class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/profile">プロフィール</a></li>
+                                <li><a class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/search">検索</a></li>
+                                <li>
+                                    <button
+                                        class="theme-toggle w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                                        type="button"
+                                        aria-label="テーマ変更"
+                                    >
+                                        <ThemeIcon />
+                                        <span>テーマ変更</span>
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                 </nav>
             </header>
 
@@ -216,20 +245,49 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                         <img class="h-12 w-12 rounded-full" src="/assets/images/suzuneu.webp" alt="" width="48" height="48" />
                         <span class="text-lg font-semibold">{title_clone}</span>
                     </a>
-                    <ul class="hidden sm:flex items-center gap-4">
-                        <li><a class=if home_active { active_cls } else { inactive_cls } href="/">"ホーム"</a></li>
-                        <li><a class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
-                        <li><a class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
-                        <li>
-                            <button
-                                class="theme-toggle inline-flex items-center justify-center h-9 w-9 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-0 bg-transparent hover:text-white/80"
-                                type="button"
-                                aria-label="テーマ変更"
-                            >
-                                <ThemeIcon />
-                            </button>
-                        </li>
-                    </ul>
+                    <div class="flex items-center gap-2">
+                        <input id="nav-toggle-fixed" type="checkbox" class="peer/nav hidden" />
+                        <label
+                            for="nav-toggle-fixed"
+                            class="sm:hidden inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/20 bg-white/10 hover:bg-white/20 transition-colors dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                            aria-label="メニューを開く"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </label>
+                        <ul class="hidden sm:flex items-center gap-4">
+                            <li><a class=if home_active { active_cls } else { inactive_cls } href="/">"ホーム"</a></li>
+                            <li><a class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
+                            <li><a class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
+                            <li>
+                                <button
+                                    class="theme-toggle inline-flex items-center justify-center h-9 w-9 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-0 bg-transparent hover:text-white/80"
+                                    type="button"
+                                    aria-label="テーマ変更"
+                                >
+                                    <ThemeIcon />
+                                </button>
+                            </li>
+                        </ul>
+                        <div class="peer-checked/nav:block hidden sm:hidden absolute right-2 top-14 bg-white text-slate-900 rounded-lg shadow-lg border border-slate-200 w-44 z-50 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">
+                            <ul class="flex flex-col divide-y divide-slate-200 dark:divide-slate-700">
+                                <li><a class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/">ホーム</a></li>
+                                <li><a class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/profile">プロフィール</a></li>
+                                <li><a class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/search">検索</a></li>
+                                <li>
+                                    <button
+                                        class="theme-toggle w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                                        type="button"
+                                        aria-label="テーマ変更"
+                                    >
+                                        <ThemeIcon />
+                                        <span>テーマ変更</span>
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                 </nav>
             </header>
         </div>
@@ -263,7 +321,7 @@ fn MetaRow(
     let upd_dt = upd_text.clone();
     let read_label = reading_minutes.map(|m| format!("読むのに約 {} 分", m));
     view! {
-        <div class="text-sm text-slate-600 dark:text-slate-300 mb-1 flex gap-4">
+        <div class="text-sm text-slate-600 dark:text-slate-300 mb-1 flex flex-wrap gap-4">
             <span>
                 "Published: "
                 <time datetime={pub_dt}>{pub_text}</time>
