@@ -75,7 +75,7 @@ WORKDIR /app
 COPY --from=builder /app/target/release/rodin /app/rodin
 COPY --from=builder /app/static /app/static
 
-RUN git clone --depth=1 -b main https://github.com/suzuneu/rodin-content.git content
+RUN git clone --depth=1 -b main https://github.com/waki285/rodin-content.git content
 
 ENV RODIN_MARKDOWN_ENABLED=true \
     RUST_LOG=info \
