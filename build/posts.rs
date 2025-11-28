@@ -264,7 +264,7 @@ fn postprocess_typst_html(raw: &str) -> String {
         .and_then(|c| c.get(1))
         .map(|m| m.as_str())
         .unwrap_or_else(|| cleaned.trim());
-    format!(r#"<div class="prose">{}</div>"#, content.trim())
+    content.trim().to_string()
 }
 
 fn estimate_reading_minutes(html: &str) -> u32 {
