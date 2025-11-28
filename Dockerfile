@@ -1,42 +1,64 @@
 # syntax=docker/dockerfile:1.7
 
 ########################################
-# Builder stage
+# Base stage with toolchain, sccache, pnpm
 ########################################
-FROM rust:slim AS builder
+FROM rust:slim AS builder-base
 
-# Install build tooling, sccache, and pandoc (optional, enables markdown export)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential pkg-config libssl-dev ca-certificates curl git pandoc \
         nodejs npm && \
     rm -rf /var/lib/apt/lists/*
 
-# Install sccache
+# sccache
 RUN curl -L https://github.com/mozilla/sccache/releases/latest/download/sccache-v0.12.0-x86_64-unknown-linux-musl.tar.gz \
     | tar xz && mv sccache-v0.12.0-x86_64-unknown-linux-musl/sccache /usr/local/bin/ && rm -rf sccache-v0.12.0-x86_64-unknown-linux-musl
 
-# Enable pnpm (matches repo lockfile)
-RUN corepack enable && corepack prepare pnpm@10.23.0 --activate
+# pnpm (lockfile matches repo)
+RUN corepack enable && corepack prepare pnpm@10.24.0 --activate
 
 WORKDIR /app
 
-# Install JS deps first (better layer caching)
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
-
-# Copy the rest of the sources
-COPY . .
-
-# Use sccache for Rust compilation
 ENV RUSTC_WRAPPER=/usr/local/bin/sccache \
     SCCACHE_DIR=/sccache
 
-# Warm cache to speed up subsequent builds
-RUN cargo fetch
+# cargo-chef for dependency caching
+RUN cargo install cargo-chef --locked
 
-# Build release binary (build.rs will run tailwind/pandoc steps)
-RUN cargo build --release
+########################################
+# Planner: analyze dependencies
+########################################
+FROM builder-base AS planner
+COPY Cargo.toml Cargo.lock build.rs ./ 
+COPY src src
+COPY build build
+COPY content content
+COPY static static
+RUN cargo chef prepare --recipe-path recipe.json
+
+########################################
+# Cook: build dependency layer
+########################################
+FROM builder-base AS cook
+COPY --from=planner /app/recipe.json /app/recipe.json
+RUN --mount=type=cache,target=/sccache,sharing=locked cargo chef cook --release --recipe-path recipe.json
+
+########################################
+# Builder: app build
+########################################
+FROM builder-base AS builder
+COPY --from=cook /app/target /app/target
+
+# JS deps first for cache friendliness
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./ 
+RUN pnpm install --frozen-lockfile
+
+# Copy full source
+COPY . .
+
+# Build (build.rs runs Tailwind/Typst/pandoc as needed)
+RUN --mount=type=cache,target=/sccache,sharing=locked cargo build --release
 
 ########################################
 # Runtime stage
@@ -49,7 +71,6 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# Copy binary and static assets
 COPY --from=builder /app/target/release/rodin /app/rodin
 COPY --from=builder /app/static /app/static
 
