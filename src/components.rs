@@ -76,31 +76,33 @@ pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> im
     view! {
         <div class="relative min-h-screen text-white overflow-hidden">
             <div class="absolute inset-0">
-                <picture>
+                <picture
+                    data-deferred-bg
+                    data-bg-sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
+                >
                     <source
                         type="image/avif"
-                        srcset="/assets/images/urumashi/urumashi-1280.avif 1280w, /assets/images/urumashi/urumashi-1920.avif 1920w, /assets/images/urumashi/urumashi-2560.avif 2560w"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
+                        data-srcset="/assets/images/urumashi/urumashi-1280.avif 1280w, /assets/images/urumashi/urumashi-1920.avif 1920w, /assets/images/urumashi/urumashi-2560.avif 2560w"
                     />
                     <source
                         type="image/webp"
-                        srcset="/assets/images/urumashi/urumashi-1280.webp 1280w, /assets/images/urumashi/urumashi-1920.webp 1920w, /assets/images/urumashi/urumashi-2560.webp 2560w"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
+                        data-srcset="/assets/images/urumashi/urumashi-1280.webp 1280w, /assets/images/urumashi/urumashi-1920.webp 1920w, /assets/images/urumashi/urumashi-2560.webp 2560w"
                     />
                     <img
-                        src="/assets/images/urumashi/urumashi-1280.jpg"
-                        srcset="/assets/images/urumashi/urumashi-1280.jpg 1280w, /assets/images/urumashi/urumashi-1920.jpg 1920w, /assets/images/urumashi/urumashi-2560.jpg 2560w"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
+                        data-src="/assets/images/urumashi/urumashi-1280.jpg"
+                        data-srcset="/assets/images/urumashi/urumashi-1280.jpg 1280w, /assets/images/urumashi/urumashi-1920.jpg 1920w, /assets/images/urumashi/urumashi-2560.jpg 2560w"
+                        data-sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
+                        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
                         width="2560"
                         height="1920"
                         alt=""
                         class="h-screen w-screen object-cover object-[80%_center]"
-                        loading="eager"
+                        loading="lazy"
                         decoding="async"
                         fetchpriority="low"
                     />
                 </picture>
-                <div class="absolute inset-0 bg-black/50" style="contain:paint;"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/60" style="contain:paint;"></div>
             </div>
 
             <div class="relative z-10 min-h-screen flex flex-col" style="contain:paint;">
