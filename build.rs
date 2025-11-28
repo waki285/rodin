@@ -2,6 +2,8 @@ use anyhow::Result;
 
 #[path = "build/assets.rs"]
 mod assets;
+#[path = "build/fonts.rs"]
+mod fonts;
 #[path = "build/markdown.rs"]
 mod markdown;
 #[path = "build/posts.rs"]
@@ -58,6 +60,7 @@ fn main() -> Result<()> {
 
     tailwind::build_tailwind();
     assets::minify_assets()?;
+    fonts::subset_regular_font()?;
 
     let mut metas = posts::build_posts(PREAMBLE_PATH, GENERATED_DIR)?;
     let markdown_ok = markdown::build_markdown(&mut metas, GENERATED_MD_DIR, PANDOC_FILTER)?;

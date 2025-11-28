@@ -8,7 +8,7 @@ FROM rust:slim AS builder-base
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential pkg-config libssl-dev ca-certificates curl git pandoc \
-        nodejs npm && \
+        woff2 nodejs npm && \
     rm -rf /var/lib/apt/lists/*
 
 # sccache
@@ -66,13 +66,15 @@ RUN --mount=type=cache,target=/sccache,sharing=locked cargo build --release
 FROM debian:bookworm-slim AS runtime
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates && \
+    apt-get install -y --no-install-recommends ca-certificates git && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY --from=builder /app/target/release/rodin /app/rodin
 COPY --from=builder /app/static /app/static
+
+RUN git clone --depth=1 -b main https://github.com/suzuneu/rodin-content.git content
 
 ENV RODIN_MARKDOWN_ENABLED=true \
     RUST_LOG=info \

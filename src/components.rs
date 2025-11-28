@@ -89,7 +89,7 @@ pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> im
                             </div>
                         </div>
                         <div class="text-center space-y-2">
-                            <div class="text-4xl font-black tracking-tight text-slate-900">"すずねーう"</div>
+                            <div class="text-4xl font-bold tracking-tight text-slate-900">"すずねーう"</div>
                             <div class="text-lg text-slate-600">"自称プログラマー"</div>
                         </div>
                         <div class="flex justify-center gap-4 mt-5">
