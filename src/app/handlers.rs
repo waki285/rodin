@@ -288,7 +288,7 @@ pub async fn security_middleware(mut req: Request<Body>, next: Next) -> Response
         HeaderValue::from_static("nosniff"),
     );
     let csp = format!(
-        "default-src 'self'; script-src 'self' 'nonce-{}' static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; require-trusted-types-for 'script'",
+        "default-src 'self'; script-src 'self' 'nonce-{}' static.cloudflareinsights.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; require-trusted-types-for 'script'",
         nonce
     );
     if let Ok(val) = HeaderValue::from_str(&csp) {
