@@ -24,7 +24,12 @@ pub(crate) fn markdown_enabled() -> bool {
 
 fn env_flag(key: &str, default: bool) -> bool {
     env::var(key)
-        .map(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "on" | "ON" | "yes" | "YES"))
+        .map(|v| {
+            matches!(
+                v.as_str(),
+                "1" | "true" | "TRUE" | "on" | "ON" | "yes" | "YES"
+            )
+        })
         .unwrap_or(default)
 }
 
