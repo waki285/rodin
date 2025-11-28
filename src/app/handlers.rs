@@ -279,7 +279,10 @@ pub async fn security_middleware(mut req: Request<Body>, next: Next) -> Response
         axum::http::header::STRICT_TRANSPORT_SECURITY,
         HeaderValue::from_static("max-age=31536000; includeSubDomains; preload"),
     );
-    res_headers.insert(axum::http::header::X_FRAME_OPTIONS, HeaderValue::from_static("SAMEORIGIN"));
+    res_headers.insert(
+        axum::http::header::X_FRAME_OPTIONS,
+        HeaderValue::from_static("SAMEORIGIN"),
+    );
     res_headers.insert(
         axum::http::header::X_CONTENT_TYPE_OPTIONS,
         HeaderValue::from_static("nosniff"),
