@@ -151,4 +151,22 @@
   } else {
     initCopyButtons();
   }
+
+  // Lazy-load home-only script after parse to shrink the critical path.
+  if (window.location.pathname === "/") {
+    const loadHomeJs = () => import("/assets/build/home.js").catch(() => {});
+    const scheduleHome = () => {
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(loadHomeJs, { timeout: 1500 });
+      } else {
+        setTimeout(loadHomeJs, 0);
+      }
+    };
+
+    if (document.readyState === "complete") {
+      scheduleHome();
+    } else {
+      window.addEventListener("load", scheduleHome, { once: true });
+    }
+  }
 })();

@@ -100,9 +100,7 @@ pub(crate) fn prerender_top_page(home_html: &str) -> String {
     let opts = HtmlOptions {
         meta: Some(top_meta()),
         structured_data: Some(vec![site_structured, homepage_structured]),
-        head_scripts: vec![format!(
-            r#"<script type="module" src="/assets/build/home.js" defer nonce="{CSP_NONCE_TOKEN}"></script>"#
-        )],
+        head_scripts: vec![],
     };
     maybe_minify(wrap_html_with_options(
         &rendered,
