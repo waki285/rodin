@@ -5,12 +5,16 @@
 ########################################
 FROM rust:slim AS builder
 
-# Install build tooling and pandoc (optional, enables markdown export)
+# Install build tooling, sccache, and pandoc (optional, enables markdown export)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential pkg-config libssl-dev ca-certificates curl git pandoc \
         nodejs npm && \
     rm -rf /var/lib/apt/lists/*
+
+# Install sccache
+RUN curl -L https://github.com/mozilla/sccache/releases/latest/download/sccache-v0.12.0-x86_64-unknown-linux-musl.tar.gz \
+    | tar xz && mv sccache-v0.12.0-x86_64-unknown-linux-musl/sccache /usr/local/bin/ && rm -rf sccache-v0.12.0-x86_64-unknown-linux-musl
 
 # Enable pnpm (matches repo lockfile)
 RUN corepack enable && corepack prepare pnpm@10.23.0 --activate
@@ -23,6 +27,13 @@ RUN pnpm install --frozen-lockfile
 
 # Copy the rest of the sources
 COPY . .
+
+# Use sccache for Rust compilation
+ENV RUSTC_WRAPPER=/usr/local/bin/sccache \
+    SCCACHE_DIR=/sccache
+
+# Warm cache to speed up subsequent builds
+RUN cargo fetch
 
 # Build release binary (build.rs will run tailwind/pandoc steps)
 RUN cargo build --release
