@@ -202,9 +202,9 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                             </svg>
                         </label>
                         <ul class="hidden sm:flex items-center gap-4">
-                            <li><a class=if home_active { active_cls } else { inactive_cls } href="/">"ホーム"</a></li>
-                            <li><a class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
-                            <li><a class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
+                            <li><a data-prefetch="true" class=if home_active { active_cls } else { inactive_cls } href="/">"ホーム"</a></li>
+                            <li><a data-prefetch="true" class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
+                            <li><a data-prefetch="true" class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
                             <li>
                                 <button
                                     class="theme-toggle inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-0 h-9 w-9 bg-transparent hover:text-white/80"
@@ -217,9 +217,9 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                         </ul>
                         <div class="peer-checked/nav:block hidden sm:hidden absolute right-2 top-14 bg-white text-slate-900 rounded-lg shadow-lg border border-slate-200 w-44 z-50 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">
                             <ul class="flex flex-col divide-y divide-slate-200 dark:divide-slate-700">
-                                <li><a class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/">ホーム</a></li>
-                                <li><a class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/profile">プロフィール</a></li>
-                                <li><a class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/search">検索</a></li>
+                                <li><a data-prefetch="true" class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/">ホーム</a></li>
+                                <li><a data-prefetch="true" class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/profile">プロフィール</a></li>
+                                <li><a data-prefetch="true" class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/search">検索</a></li>
                                 <li>
                                     <button
                                         class="theme-toggle w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"
@@ -257,9 +257,9 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                             </svg>
                         </label>
                         <ul class="hidden sm:flex items-center gap-4">
-                            <li><a class=if home_active { active_cls } else { inactive_cls } href="/">"ホーム"</a></li>
-                            <li><a class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
-                            <li><a class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
+                            <li><a data-prefetch="true" class=if home_active { active_cls } else { inactive_cls } href="/">"ホーム"</a></li>
+                            <li><a data-prefetch="true" class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
+                            <li><a data-prefetch="true" class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
                             <li>
                                 <button
                                     class="theme-toggle inline-flex items-center justify-center h-9 w-9 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-0 bg-transparent hover:text-white/80"
@@ -272,9 +272,9 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                         </ul>
                         <div class="peer-checked/nav:block hidden sm:hidden absolute right-2 top-14 bg-white text-slate-900 rounded-lg shadow-lg border border-slate-200 w-44 z-50 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">
                             <ul class="flex flex-col divide-y divide-slate-200 dark:divide-slate-700">
-                                <li><a class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/">ホーム</a></li>
-                                <li><a class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/profile">プロフィール</a></li>
-                                <li><a class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/search">検索</a></li>
+                                <li><a data-prefetch="true" class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/">ホーム</a></li>
+                                <li><a data-prefetch="true" class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/profile">プロフィール</a></li>
+                                <li><a data-prefetch="true" class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/search">検索</a></li>
                                 <li>
                                     <button
                                         class="theme-toggle w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"

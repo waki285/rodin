@@ -95,6 +95,29 @@
     a.addEventListener("click", () => closeMenus());
   });
 
+  // Prefetch in-page links (similar to Next.js) after idle so LCP is unaffected
+  const schedulePrefetch = () => {
+    const addPrefetch = (href) => {
+      if (!href || href.startsWith("http")) return;
+      // avoid duplicate prefetch tags
+      if (document.querySelector(`link[rel="prefetch"][href="${href}"]`)) return;
+      const l = document.createElement("link");
+      l.rel = "prefetch";
+      l.as = "document";
+      l.href = href;
+      document.head.appendChild(l);
+    };
+
+    const links = document.querySelectorAll("a[data-prefetch='true']");
+    links.forEach((a) => addPrefetch(a.getAttribute("href")));
+  };
+
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(schedulePrefetch, { timeout: 3000 });
+  } else {
+    setTimeout(schedulePrefetch, 2000);
+  }
+
   // Add copy buttons to code blocks
   const initCopyButtons = () => {
     document.querySelectorAll("pre code").forEach((code) => {

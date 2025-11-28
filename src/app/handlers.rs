@@ -55,12 +55,12 @@ pub async fn blog_handler(
 
     // If requested /blog/{slug}.md, return generated Markdown
     if let Some(stripped) = slug_clean.strip_suffix(".md") {
-        return markdown_response(&state, stripped);
+        return markdown_response(&state, stripped).await;
     }
 
     let prerendered = match state.blog_pages.get(&slug_clean) {
         Some(p) => p,
-        None => return StatusCode::NOT_FOUND.into_response(),
+        None => return not_found_response().await,
     };
 
     let client_ip = client_ip_from_headers(&headers).unwrap_or_else(|| addr.ip().to_string());
@@ -187,7 +187,7 @@ pub async fn profile_handler(
 pub async fn raw_typ_response(slug: &str) -> Response {
     // reject directory traversal or hidden drafts
     if slug.contains('/') || slug.starts_with('_') {
-        return StatusCode::NOT_FOUND.into_response();
+        return not_found_response().await;
     }
     let path = PathBuf::from("content").join(format!("{slug}.typ"));
     match fs::read_to_string(&path).await {
@@ -199,11 +199,11 @@ pub async fn raw_typ_response(slug: &str) -> Response {
             src,
         )
             .into_response(),
-        Err(_) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => not_found_response().await,
     }
 }
 
-pub fn markdown_response(state: &AppState, slug: &str) -> Response {
+pub async fn markdown_response(state: &AppState, slug: &str) -> Response {
     if !markdown_enabled() {
         return (
             [(
@@ -218,7 +218,7 @@ pub fn markdown_response(state: &AppState, slug: &str) -> Response {
             .into_response();
     }
     if slug.contains('/') || slug.starts_with('_') {
-        return StatusCode::NOT_FOUND.into_response();
+        return not_found_response().await;
     }
     match state.blog_markdowns.get(slug) {
         Some(md) => (
@@ -229,7 +229,7 @@ pub fn markdown_response(state: &AppState, slug: &str) -> Response {
             md.as_ref().to_string(),
         )
             .into_response(),
-        None => StatusCode::NOT_FOUND.into_response(),
+        None => not_found_response().await,
     }
 }
 
