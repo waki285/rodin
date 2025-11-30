@@ -3,7 +3,7 @@
 ########################################
 # Base stage with toolchain, sccache, pnpm
 ########################################
-FROM rust:slim AS builder-base
+FROM rustlang/rust:nightly-slim AS builder-base
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
