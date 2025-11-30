@@ -8,7 +8,7 @@ FROM rust:slim AS builder-base
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential pkg-config libssl-dev ca-certificates curl git pandoc \
-        woff2 libharfbuzz-dev nodejs npm clang libclang-dev && \
+        woff2 libharfbuzz-dev nodejs npm clang libclang-dev mold && \
     rm -rf /var/lib/apt/lists/*
 
 # sccache
@@ -21,7 +21,8 @@ RUN corepack enable && corepack prepare pnpm@10.24.0 --activate
 WORKDIR /app
 
 ENV RUSTC_WRAPPER=/usr/local/bin/sccache \
-    SCCACHE_DIR=/sccache
+    SCCACHE_DIR=/sccache \
+    RUSTFLAGS="-Clink-arg=-fuse-ld=mold -Z threads=$(nproc)"
 
 # cargo-chef for dependency caching (prebuilt musl binary)
 RUN curl -L https://github.com/LukeMathWalker/cargo-chef/releases/download/v0.1.73/cargo-chef-x86_64-unknown-linux-musl.tar.gz \
@@ -43,7 +44,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 ########################################
 FROM builder-base AS cook
 COPY --from=planner /app/recipe.json /app/recipe.json
-RUN --mount=type=cache,target=/sccache,sharing=locked cargo chef cook --release --recipe-path recipe.json
+RUN --mount=type=cache,target=/sccache,sharing=locked cargo -Z threads=$(nproc) chef cook --release --recipe-path recipe.json
 
 ########################################
 # Builder: app build
@@ -59,7 +60,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Build (build.rs runs Esbuild/Typst/pandoc as needed)
-RUN --mount=type=cache,target=/sccache,sharing=locked cargo build --release
+RUN --mount=type=cache,target=/sccache,sharing=locked cargo -Z threads=$(nproc) build --release
 
 ########################################
 # Runtime stage

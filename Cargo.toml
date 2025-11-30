@@ -29,6 +29,8 @@ typst-library = "0.14.0"
 
 [build-dependencies]
 anyhow = "1.0.100"
+hb-subset = "0.3.0"
+lightningcss = { version = "1.0.0-alpha.68", features = ["browserslist"] }
 minify-html = "0.18.1"
 regex = "1.11"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -37,8 +39,6 @@ typst = "0.14.0"
 typst-as-lib = { version = "0.15.0", features = ["typst-kit-fonts", "typst-kit-embed-fonts", "typst-html"] }
 typst-html = "0.14.0"
 typst-library = "0.14.0"
-hb-subset = "0.3.0"
-lightningcss = { version = "1.0.0-alpha.68", features = ["browserslist"] }
 
 [profile.release]
 lto = true
