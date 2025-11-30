@@ -12,8 +12,6 @@ mod markdown;
 mod posts;
 #[path = "build/sitemap.rs"]
 mod sitemap;
-#[path = "build/tailwind.rs"]
-mod tailwind;
 
 const PREAMBLE_PATH: &str = "static/preamble.typ";
 const GENERATED_DIR: &str = "static/generated";
@@ -44,19 +42,15 @@ fn main() -> Result<()> {
         .unwrap_or_else(|| "unknown".to_string());
     println!("cargo:rustc-env=GIT_HASH={}", git_hash);
 
-    println!("cargo:rerun-if-changed=static/input.css");
-    println!("cargo:rerun-if-changed=tailwind.config.js");
     println!("cargo:rerun-if-changed=src");
     println!("cargo:rerun-if-changed=content");
     println!("cargo:rerun-if-changed=static/app.js");
-    println!("cargo:rerun-if-changed=static/custom.css");
-    println!("cargo:rerun-if-changed=static/tailwind-fallback.css");
+    println!("cargo:rerun-if-changed=static/css");
     println!("cargo:rerun-if-changed={PREAMBLE_PATH}");
     println!("cargo:rerun-if-changed={PANDOC_FILTER}");
 
     println!("cargo:rustc-env={MARKDOWN_ENV_KEY}=false");
 
-    tailwind::build_tailwind();
     assets::minify_assets()?;
     fonts::subset_regular_font()?;
 

@@ -29,7 +29,6 @@ typst-library = "0.14.0"
 
 [build-dependencies]
 anyhow = "1.0.100"
-minifier = "0.3.6"
 minify-html = "0.18.1"
 regex = "1.11"
 serde = { version = "1.0.228", features = ["derive"] }

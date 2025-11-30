@@ -58,7 +58,7 @@ RUN pnpm install --frozen-lockfile
 # Copy full source
 COPY . .
 
-# Build (build.rs runs Tailwind/Typst/pandoc as needed)
+# Build (build.rs runs Esbuild/Typst/pandoc as needed)
 RUN --mount=type=cache,target=/sccache,sharing=locked cargo build --release
 
 ########################################

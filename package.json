@@ -1,13 +1,11 @@
 {
-  "name": "rodin-tailwind",
+  "name": "rodin",
   "private": true,
   "scripts": {
     "build": "echo Use cargo to build this project! && exit 1",
     "start": "echo Use cargo to run this project! && exit 1"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "4.1.17",
-    "@tailwindcss/typography": "0.5.19",
-    "tailwindcss": "4.1.17"
+    "esbuild": "^0.27.0"
   }
 }

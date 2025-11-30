@@ -295,7 +295,9 @@ pub(crate) fn render_search_page(
     meta.insert("robots".to_string(), "noindex, nofollow".to_string());
     let opts = HtmlOptions {
         meta: Some(meta),
-        head_links: vec![r#"<link rel="stylesheet" href="/assets/build/search.css" />"#.to_string()],
+        head_links: vec![
+            r#"<link rel="stylesheet" href="/assets/build/search.css" />"#.to_string(),
+        ],
         ..Default::default()
     };
     let html = wrap_html_with_options(&rendered, "検索｜すずねーう", &opts);

@@ -83,7 +83,7 @@ fn print_help() {
     println!(
         "  builds Typst articles in ./content into static/generated (HTML, index.json, sitemap)"
     );
-    println!("  skips Tailwind/font steps; only content generation runs");
+    println!("  skips font steps; only content generation runs");
     println!("  --skip-markdown : do not run pandoc even if available");
     println!("  --site=URL      : override sitemap base (default {DEFAULT_SITE_URL})");
 }
