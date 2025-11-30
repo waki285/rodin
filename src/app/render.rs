@@ -27,6 +27,7 @@ pub struct SearchHit {
 pub(crate) struct HtmlOptions {
     pub meta: Option<HashMap<String, String>>,
     pub structured_data: Option<Vec<String>>,
+    pub head_links: Vec<String>,
     pub head_scripts: Vec<String>,
 }
 
@@ -47,6 +48,11 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
                 .join("\n  ")
         })
         .unwrap_or_default();
+    let head_links = if opts.head_links.is_empty() {
+        String::new()
+    } else {
+        opts.head_links.join("\n  ")
+    };
     let head_scripts = if opts.head_scripts.is_empty() {
         String::new()
     } else {
@@ -57,7 +63,7 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <link rel="preload" href="/assets/build/tailwind.css" as="style" />
+  <link rel="preload" href="/assets/build/critical.css" as="style" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title}</title>
   {meta_tags}
@@ -72,18 +78,21 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="icon" href="/android-chrome-192x192.png" sizes="192x192" />
   <link rel="icon" href="/android-chrome-512x512.png" sizes="512x512" />
-  <link rel="stylesheet" href="/assets/build/tailwind.css" />
+  <link rel="stylesheet" href="/assets/build/critical.css" />
+  <link rel="stylesheet" href="/assets/build/prose.css" />
+  <link rel="stylesheet" href="/assets/build/lazy.css" data-unblock-css="1" media="print" />
+  {head_links}
   <script nonce="{CSP_NONCE_TOKEN}">
-    const l=document.querySelector('link[data-unblock-css="1"]');
-    if(l){{
+    const links=[...document.querySelectorAll('link[data-unblock-css=\"1\"]')];
+    links.forEach(l=>{{
       const enable=()=>{{l.media='all';}};
       l.addEventListener('load',enable,{{once:true}});
       requestAnimationFrame(()=>{{if(l.sheet) enable();}});
-    }}
+    }});
   </script>
   {head_scripts}
 </head>
-<body class="bg-surface text-ink">
+<body>
 {body}
 <script type="module" src="/assets/build/app.js" nonce="{CSP_NONCE_TOKEN}"></script>
 </body>
@@ -100,6 +109,7 @@ pub(crate) fn prerender_top_page(home_html: &str) -> String {
     let opts = HtmlOptions {
         meta: Some(top_meta()),
         structured_data: Some(vec![site_structured, homepage_structured]),
+        head_links: vec![r#"<link rel="stylesheet" href="/assets/build/post-card.css" data-unblock-css="1" media="print" />"#.to_string()],
         head_scripts: vec![],
     };
     maybe_minify(wrap_html_with_options(
@@ -285,6 +295,7 @@ pub(crate) fn render_search_page(
     meta.insert("robots".to_string(), "noindex, nofollow".to_string());
     let opts = HtmlOptions {
         meta: Some(meta),
+        head_links: vec![r#"<link rel="stylesheet" href="/assets/build/search.css" />"#.to_string()],
         ..Default::default()
     };
     let html = wrap_html_with_options(&rendered, "検索｜すずねーう", &opts);

@@ -1,13 +1,13 @@
 use anyhow::Result;
 
-#[path = "../../build/posts.rs"]
-mod posts;
-#[path = "../../build/markdown.rs"]
-mod markdown;
-#[path = "../../build/sitemap.rs"]
-mod sitemap;
 #[path = "../../src/frontmatter.rs"]
 mod frontmatter;
+#[path = "../../build/markdown.rs"]
+mod markdown;
+#[path = "../../build/posts.rs"]
+mod posts;
+#[path = "../../build/sitemap.rs"]
+mod sitemap;
 
 const PREAMBLE_PATH: &str = "static/preamble.typ";
 const GENERATED_DIR: &str = "static/generated";
@@ -80,7 +80,9 @@ fn main() -> Result<()> {
 
 fn print_help() {
     println!("Usage: rodin-content [--skip-markdown] [--site=BASE_URL]");
-    println!("  builds Typst articles in ./content into static/generated (HTML, index.json, sitemap)");
+    println!(
+        "  builds Typst articles in ./content into static/generated (HTML, index.json, sitemap)"
+    );
     println!("  skips Tailwind/font steps; only content generation runs");
     println!("  --skip-markdown : do not run pandoc even if available");
     println!("  --site=URL      : override sitemap base (default {DEFAULT_SITE_URL})");

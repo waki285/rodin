@@ -1,0 +1,58 @@
+@layer utilities {
+  :where(.space-y-8 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(
+      calc(var(--spacing) * 8) * var(--tw-space-y-reverse)
+    );
+    margin-block-end: calc(
+      calc(var(--spacing) * 8) * calc(1 - var(--tw-space-y-reverse))
+    );
+  }
+}
+
+html {
+  background-color: var(--color-header);
+}
+html.dark {
+  background-color: #25262b;
+}
+
+.top-main {
+  width: 100%;
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  content-visibility: auto;
+  contain-intrinsic-size: 1200px 3200px;
+  & > div {
+    margin: 0 auto;
+    max-width: var(--container-3xl);
+    padding: 3rem 1.5rem;
+  }
+}
+
+.code-copy-btn {
+  color: #0f172a;
+  cursor: pointer;
+  background: #ffffffe6;
+  border: 1px solid #94a3b899;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  transition: all 0.12s;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  box-shadow: 0 2px 6px #00000014;
+}
+.dark .code-copy-btn {
+  color: #e5e7eb;
+  background: #1e293be6;
+  border-color: #64748bb3;
+}
+.code-copy-btn:hover {
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+}
+.code-copy-btn:active {
+  transform: translateY(0);
+}

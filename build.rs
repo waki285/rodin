@@ -4,6 +4,8 @@ use anyhow::Result;
 mod assets;
 #[path = "build/fonts.rs"]
 mod fonts;
+#[path = "src/frontmatter.rs"]
+mod frontmatter;
 #[path = "build/markdown.rs"]
 mod markdown;
 #[path = "build/posts.rs"]
@@ -12,8 +14,6 @@ mod posts;
 mod sitemap;
 #[path = "build/tailwind.rs"]
 mod tailwind;
-#[path = "src/frontmatter.rs"]
-mod frontmatter;
 
 const PREAMBLE_PATH: &str = "static/preamble.typ";
 const GENERATED_DIR: &str = "static/generated";

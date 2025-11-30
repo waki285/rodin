@@ -20,18 +20,18 @@ pub fn BlogPage(
     let crumbs = meta.breadcrumbs.clone();
     let registry = crate::app::render::breadcrumb_registry();
     view! {
-        <div class="min-h-screen bg-surface text-ink">
+        <div class="blog-wrapper">
             <HeaderBar
                 title="すずねーう".to_string()
                 subtitle=format!("{client_ip}")
                 current_path=current_path.clone()
             />
-            <main class="mx-auto max-w-3xl p-6 prose dark:prose-invert space-y-3" style="content-visibility:auto;contain-intrinsic-size:1200px 3200px;">
+            <main class="blog-container prose dark:prose-invert">
                 {(!crumbs.is_empty()).then(|| {
                     let last = crumbs.len().saturating_sub(1);
                     view! {
-                        <nav aria-label="breadcrumb" class="not-prose mb-2 text-sm text-slate-500 dark:text-slate-400">
-                            <ol class="flex flex-wrap items-center gap-1">
+                        <nav aria-label="breadcrumb" class="blog-breadcrumb not-prose">
+                            <ol>
                                 {crumbs.iter().enumerate().map(|(idx, key)| {
                                     let is_last = idx == last;
                                     let (label, href_opt) = registry
@@ -39,15 +39,15 @@ pub fn BlogPage(
                                         .map(|(n, h)| (n.to_string(), Some(*h)))
                                         .unwrap_or_else(|| (key.clone(), None));
                                     view! {
-                                        <li class="flex items-center gap-1">
+                                        <li>
                                             {if is_last {
-                                                view! { <span class="font-semibold text-slate-700 dark:text-slate-200">{label.clone()}</span> }.into_any()
+                                                view! { <span class="blog-breadcrumb-label">{label.clone()}</span> }.into_any()
                                             } else {
                                                 view! {
-                                                    <a href={href_opt.unwrap_or("#")} class="hover:text-slate-700 dark:hover:text-slate-200">{label.clone()}</a>
+                                                    <a href={href_opt.unwrap_or("#")} class="blog-breadcrumb-label">{label.clone()}</a>
                                                 }.into_any()
                                             }}
-                                            {view! { <span class="text-slate-400">/</span> }.into_any()}
+                                            {view! { <span class="separator">/</span> }.into_any()}
                                         </li>
                                     }
                                 }).collect_view()}
@@ -55,8 +55,8 @@ pub fn BlogPage(
                         </nav>
                     }
                 })}
-                <div class="space-y-1 mb-[0.888889em]">
-                    <h1 class="text-3xl font-bold mb-0">{article_title}</h1>
+                <div class="blog-title">
+                    <h1>{article_title}</h1>
                     <ShowSubtitle text=subtitle_view />
                 </div>
                 <MetaRow
@@ -74,8 +74,8 @@ pub fn BlogPage(
 #[component]
 pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> impl IntoView {
     view! {
-        <div class="relative min-h-screen text-white overflow-hidden">
-            <div class="absolute inset-0">
+        <div class="top-container">
+            <div class="top-hero">
                 <picture
                     data-deferred-bg
                     data-bg-sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
@@ -96,44 +96,42 @@ pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> im
                         width="2560"
                         height="1920"
                         alt=""
-                        class="h-screen w-screen object-cover object-[80%_center]"
                         loading="lazy"
                         decoding="async"
                         fetchpriority="low"
                     />
                 </picture>
-                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/60" style="contain:paint;"></div>
+                <div class="paint"></div>
             </div>
 
-            <div class="relative z-10 min-h-screen flex flex-col" style="contain:paint;">
-                <div class="absolute inset-x-0 top-0">
+            <div class="top-content">
+                <div class="top-header">
                     <HeaderBar
                         title="すずねーう".to_string()
                         subtitle=format!("{client_ip}")
                         current_path=current_path.clone()
                     />
                 </div>
-                <div class="flex-1 flex items-center justify-center px-6 min-h-screen">
-                    <div class="bg-white/90 text-slate-900 rounded-2xl shadow-xl px-8 py-10 max-w-md w-full backdrop-blur">
-                        <div class="flex justify-center mb-6">
-                            <div class="h-20 w-20 rounded-full flex items-center justify-center shadow-lg">
-                                <img src="/assets/images/suzuneu.webp" alt="icon" class="h-20 w-20 object-cover rounded-full" />
+                <div class="top-profcard-container">
+                    <div class="top-profcard">
+                        <div class="top-avatar">
+                            <div>
+                                <img src="/assets/images/suzuneu.webp" alt="icon" />
                             </div>
                         </div>
-                        <div class="text-center space-y-2">
-                            <div class="text-4xl font-bold tracking-tight text-slate-900">"すずねーう"</div>
-                            <div class="text-lg text-slate-600">"自称プログラマー"</div>
+                        <div class="top-name">
+                            <div class="top-name-title">"すずねーう"</div>
+                            <div class="top-name-subtitle">"自称プログラマー"</div>
                         </div>
-                        <div class="flex justify-center gap-4 mt-5">
+                        <div class="top-social">
                             <SocialIcon kind="X" href="https://x.com/suzuneu_discord" class="icon-x" />
                             <SocialIcon kind="Twitter" href="https://x.com/suzuneu_discord" class="icon-twitter hidden" />
                             <SocialIcon kind="GitHub" href="https://github.com/waki285" class="" />
                             <SocialIcon kind="Discord" href="https://discord.com/users/717028469992587315" class="" />
                         </div>
-                        <div class="mt-7 flex justify-center">
+                        <div class="top-profile-link">
                             <a
                                 href="/profile"
-                                class="inline-flex items-center justify-center rounded-lg bg-slate-900 text-white px-5 py-2.5 text-sm font-semibold shadow-lg hover:bg-slate-800 transition-colors"
                             >
                                 "プロフィール"
                             </a>
@@ -141,8 +139,8 @@ pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> im
                     </div>
                 </div>
 
-                <main class="w-full bg-[var(--color-surface)] text-[var(--color-ink)]" style="content-visibility:auto;contain-intrinsic-size:1200px 3200px;">
-                    <div class="mx-auto max-w-3xl px-6 py-12 space-y-8">
+                <main class="top-main">
+                    <div>
                         <article class="prose dark:prose-invert" inner_html=home_html></article>
                     </div>
                 </main>
@@ -184,7 +182,7 @@ fn SocialIcon(kind: &'static str, href: &'static str, class: &'static str) -> im
     view! {
         <a
             href=href
-            class=format!("{} h-11 w-11 rounded-full bg-white/90 text-slate-900 flex items-center justify-center shadow hover:-translate-y-0.5 transition-transform", class)
+            class=format!("{} social-icon", class)
             target="_blank"
             aria_label=kind
             rel="noreferrer"
@@ -209,37 +207,36 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
     let home_active = current_path == "/";
     let profile_active = current_path.starts_with("/profile");
     let search_active = current_path.starts_with("/search");
-    let active_cls = "relative pb-1 after:absolute after:left-0 after:bottom-0 after:h-0.5 after:w-full after:bg-white";
-    let inactive_cls = "relative pb-1 hover:text-white/80";
+    let active_cls = "active";
+    let inactive_cls = "inactive";
     view! {
-        <div class="relative">
-            <header id="primary-header" class="w-full h-16 header-surface text-white flex justify-center items-stretch">
-                <nav class="max-w-[1200px] w-full mx-auto flex items-center justify-between px-2 relative">
-                    <div class="flex items-center gap-3">
-                        <a class="flex items-center gap-2" href="/" aria-label="home">
-                            <img class="h-12 w-12 rounded-full" src="/assets/images/suzuneu.webp" alt="" width="48" height="48" />
-                            <span class="text-2xl font-semibold tracking-wide">{title.clone()}</span>
+        <div class="header-container">
+            <header id="primary-header">
+                <nav>
+                    <div class="header-logo">
+                        <a href="/" aria-label="home">
+                            <img src="/assets/images/suzuneu.webp" alt="" width="48" height="48" />
+                            <span>{title.clone()}</span>
                         </a>
                         <ShowIp subtitle=subtitle.clone() />
                     </div>
-                    <div class="flex items-center gap-2">
-                        <input id="nav-toggle-main" type="checkbox" class="peer/nav hidden" />
+                    <div class="header-menu">
+                        <input id="nav-toggle-main" type="checkbox" />
                         <label
                             for="nav-toggle-main"
-                            class="sm:hidden inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/20 bg-white/10 hover:bg-white/20 transition-colors dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
                             aria-label="メニューを開く"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
                         </label>
-                        <ul class="hidden sm:flex items-center gap-4">
+                        <ul class="header-links">
                             <li><a data-prefetch="true" class=if home_active { active_cls } else { inactive_cls } href="/">"ホーム"</a></li>
                             <li><a data-prefetch="true" class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
                             <li><a data-prefetch="true" class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
                             <li>
                                 <button
-                                    class="theme-toggle inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-0 h-9 w-9 bg-transparent hover:text-white/80"
+                                    class="theme-toggle"
                                     type="button"
                                     aria-label="テーマ変更"
                                 >
@@ -247,14 +244,14 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                                 </button>
                             </li>
                         </ul>
-                        <div class="peer-checked/nav:block hidden sm:hidden absolute right-2 top-14 bg-white text-slate-900 rounded-lg shadow-lg border border-slate-200 w-44 z-50 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">
-                            <ul class="flex flex-col divide-y divide-slate-200 dark:divide-slate-700">
-                                <li><a data-prefetch="true" class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/">ホーム</a></li>
-                                <li><a data-prefetch="true" class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/profile">プロフィール</a></li>
-                                <li><a data-prefetch="true" class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/search">検索</a></li>
+                        <div class="mobile-menu">
+                            <ul>
+                                <li><a data-prefetch="true" href="/">ホーム</a></li>
+                                <li><a data-prefetch="true" href="/profile">プロフィール</a></li>
+                                <li><a data-prefetch="true" href="/search">検索</a></li>
                                 <li>
                                     <button
-                                        class="theme-toggle w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                                        class="theme-toggle"
                                         type="button"
                                         aria-label="テーマ変更"
                                     >
@@ -270,31 +267,29 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
 
             <header
                 id="fixed-header"
-                class="pointer-events-none opacity-0 -translate-y-3 transition-all duration-300 ease-in-out fixed top-0 w-full z-40 hidden"
             >
-                <nav class="max-w-[1200px] w-full mx-auto h-16 flex items-center justify-between px-2 header-surface text-white rounded-b-xl backdrop-blur">
-                    <a class="flex items-center gap-2" href="/">
-                        <img class="h-12 w-12 rounded-full" src="/assets/images/suzuneu.webp" alt="" width="48" height="48" />
-                        <span class="text-lg font-semibold">{title_clone}</span>
+                <nav>
+                    <a href="/">
+                        <img src="/assets/images/suzuneu.webp" alt="" width="48" height="48" />
+                        <span>{title_clone}</span>
                     </a>
-                    <div class="flex items-center gap-2">
-                        <input id="nav-toggle-fixed" type="checkbox" class="peer/nav hidden" />
+                    <div class="header-menu">
+                        <input id="nav-toggle-fixed" type="checkbox" />
                         <label
                             for="nav-toggle-fixed"
-                            class="sm:hidden inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/20 bg-white/10 hover:bg-white/20 transition-colors dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
                             aria-label="メニューを開く"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
                         </label>
-                        <ul class="hidden sm:flex items-center gap-4">
+                        <ul class="header-links">
                             <li><a data-prefetch="true" class=if home_active { active_cls } else { inactive_cls } href="/">"ホーム"</a></li>
                             <li><a data-prefetch="true" class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
                             <li><a data-prefetch="true" class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
                             <li>
                                 <button
-                                    class="theme-toggle inline-flex items-center justify-center h-9 w-9 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-0 bg-transparent hover:text-white/80"
+                                    class="theme-toggle"
                                     type="button"
                                     aria-label="テーマ変更"
                                 >
@@ -302,14 +297,14 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                                 </button>
                             </li>
                         </ul>
-                        <div class="peer-checked/nav:block hidden sm:hidden absolute right-2 top-14 bg-white text-slate-900 rounded-lg shadow-lg border border-slate-200 w-44 z-50 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">
-                            <ul class="flex flex-col divide-y divide-slate-200 dark:divide-slate-700">
-                                <li><a data-prefetch="true" class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/">ホーム</a></li>
-                                <li><a data-prefetch="true" class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/profile">プロフィール</a></li>
-                                <li><a data-prefetch="true" class="block px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700" href="/search">検索</a></li>
+                        <div class="mobile-menu">
+                            <ul>
+                                <li><a data-prefetch="true" href="/">ホーム</a></li>
+                                <li><a data-prefetch="true" href="/profile">プロフィール</a></li>
+                                <li><a data-prefetch="true" href="/search">検索</a></li>
                                 <li>
                                     <button
-                                        class="theme-toggle w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                                        class="theme-toggle"
                                         type="button"
                                         aria-label="テーマ変更"
                                     >
@@ -332,7 +327,7 @@ fn ShowIp(subtitle: String) -> impl IntoView {
     let subtitle_clone = subtitle.clone();
     view! {
         <button
-            class="text-left text-sm text-white/80 underline underline-offset-2 hover:text-white"
+            class="show-ip"
             data-show-ip=subtitle_clone
             on:click=move |_| set_revealed.update(|prev| *prev = true)
         >
@@ -353,7 +348,7 @@ fn MetaRow(
     let upd_dt = upd_text.clone();
     let read_label = reading_minutes.map(|m| format!("読むのに約 {} 分", m));
     view! {
-        <div class="text-sm text-slate-600 dark:text-slate-300 mb-1 flex flex-wrap gap-4">
+        <div class="meta-row">
             <span>
                 "Published: "
                 <time datetime={pub_dt}>{pub_text}</time>
@@ -373,14 +368,14 @@ fn ShowTags(tags: Vec<String>) -> impl IntoView {
         .into_iter()
         .map(|t| {
             view! {
-                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-slate-300 dark:border-slate-600 bg-gray-100 dark:bg-gray-800 text-sm text-slate-700 dark:text-slate-200">
-                    <span class="text-xs text-slate-500 dark:text-slate-300">"#"</span>
+                <span class="blog-tag">
+                    <span class="blog-tag-hash">"#"</span>
                     <span>{t}</span>
                 </span>
             }
         })
         .collect::<Vec<_>>();
-    view! { <div class="mb-4 flex flex-wrap gap-2">{chips}</div> }
+    view! { <div class="blog-tags">{chips}</div> }
 }
 
 #[component]
@@ -388,16 +383,16 @@ fn ShowSubtitle(text: String) -> impl IntoView {
     if text.is_empty() {
         None::<View<_>>
     } else {
-        Some(view! { <p class="not-prose text-gray-600 dark:text-gray-400 py-0">{text}</p> })
+        Some(view! { <p class="not-prose">{text}</p> })
     }
 }
 
 #[component]
 fn ThemeIcon() -> impl IntoView {
     view! {
-        <span class="inline-flex h-5 w-5 items-center justify-center relative">
+        <span class="theme-icon-span">
             <svg
-                class="theme-icon icon-sun h-5 w-5"
+                class="theme-icon icon-sun"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
@@ -419,7 +414,7 @@ fn ThemeIcon() -> impl IntoView {
                 <path d="m17.3 6.7 1.77-1.77" />
             </svg>
             <svg
-                class="theme-icon icon-moon h-5 w-5"
+                class="theme-icon icon-moon"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"

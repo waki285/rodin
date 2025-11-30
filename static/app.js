@@ -4,12 +4,7 @@
   if (sticky && primary) {
     sticky.classList.remove("hidden");
     const update = (active) => {
-      sticky.classList.toggle("opacity-100", active);
-      sticky.classList.toggle("translate-y-0", active);
-      sticky.classList.toggle("pointer-events-auto", active);
-      sticky.classList.toggle("opacity-0", !active);
-      sticky.classList.toggle("-translate-y-3", !active);
-      sticky.classList.toggle("pointer-events-none", !active);
+      sticky.classList.toggle("active", active);
     };
 
     if ("IntersectionObserver" in window) {
@@ -68,7 +63,7 @@
       const ip = btn.getAttribute("data-show-ip");
       if (!ip) return;
       btn.textContent = "IP: " + ip;
-      btn.classList.remove("underline", "underline-offset-2");
+      btn.classList.remove("underline");
     });
   });
 
