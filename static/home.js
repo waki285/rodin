@@ -19,10 +19,19 @@
     }
   });
 
-  // Delay loading the heavy hero background until after LCP is settled.
+  // Delay swapping to high-quality hero until after LCP is settled.
   const loadDeferredBackground = () => {
     const picture = document.querySelector("[data-deferred-bg]");
     if (!picture || picture.dataset.loaded === "1") return;
+
+    const avifHi = picture.querySelector('source[type="image/avif"][data-hi-srcset]');
+    if (avifHi instanceof HTMLSourceElement) {
+      const hi = avifHi.getAttribute("data-hi-srcset");
+      if (hi) {
+        avifHi.srcset = hi;
+        avifHi.removeAttribute("data-hi-srcset");
+      }
+    }
 
     picture.querySelectorAll("source[data-srcset]").forEach((source) => {
       const set = source.getAttribute("data-srcset");
@@ -40,8 +49,8 @@
       if (srcset) img.srcset = srcset;
       const src = img.getAttribute("data-src");
       if (src) img.src = src;
-      img.fetchPriority = "low";
-      img.loading = "lazy";
+      img.fetchPriority = "high";
+      img.loading = "eager";
     }
 
     picture.dataset.loaded = "1";

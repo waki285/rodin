@@ -109,7 +109,14 @@ pub(crate) fn prerender_top_page(home_html: &str) -> String {
     let opts = HtmlOptions {
         meta: Some(top_meta()),
         structured_data: Some(vec![site_structured, homepage_structured]),
-        head_links: vec![r#"<link rel="stylesheet" href="/assets/build/post-card.css" data-unblock-css="1" media="print" />"#.to_string()],
+        head_links: vec![
+            // CSS for post cards on top page
+            r#"<link rel="stylesheet" href="/assets/build/post-card.css" data-unblock-css="1" media="print" />"#.to_string(),
+            // Preload low-res hero candidates by viewport width
+            r#"<link rel="preload" as="image" type="image/avif" href="/assets/images/urumashi/urumashi-1280-low.avif" media="(max-width: 640px)" />"#.to_string(),
+            r#"<link rel="preload" as="image" type="image/avif" href="/assets/images/urumashi/urumashi-1920-low.avif" media="(min-width: 641px) and (max-width: 1024px)" />"#.to_string(),
+            r#"<link rel="preload" as="image" type="image/avif" href="/assets/images/urumashi/urumashi-2560-low.avif" media="(min-width: 1025px)" />"#.to_string(),
+        ],
         head_scripts: vec![],
     };
     maybe_minify(wrap_html_with_options(
