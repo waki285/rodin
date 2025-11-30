@@ -3946,6 +3946,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "futures",
  "hb-subset",
  "leptos",
  "leptos_axum",

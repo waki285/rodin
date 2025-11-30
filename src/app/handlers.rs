@@ -5,7 +5,7 @@ use axum::{
     middleware::Next,
     response::{Html, IntoResponse, Redirect, Response},
 };
-use std::{env, net::SocketAddr};
+use std::{env, net::SocketAddr, sync::LazyLock};
 
 use super::{markdown_enabled, render::inject_runtime_tokens, state::AppState};
 use crate::app::render::{render_search_page, SearchHit};
@@ -13,7 +13,10 @@ use crate::app::render::{render_search_page, SearchHit};
 const CSP_PREFIX: &str = "default-src 'self'; script-src 'self' 'nonce-";
 const CSP_SUFFIX: &str = "' static.cloudflareinsights.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; require-trusted-types-for 'script'";
 
-pub async fn index_handler(
+static TRUST_PROXY_ENABLED: LazyLock<bool> =
+        LazyLock::new(|| env::var("TRUST_PROXY").map(|v| v == "true").unwrap_or(false));
+
+        pub async fn index_handler(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
@@ -87,9 +90,10 @@ pub async fn search_handler(
     let mut hits = Vec::new();
     if !q.is_empty() {
         let q_lc = q.to_lowercase();
+        let q_chars: Vec<char> = q_lc.chars().collect();
         for entry in state.search_index.iter() {
             if entry.title_lc.contains(&q_lc) || entry.body_lc.contains(&q_lc) {
-                let snippet = build_snippet(&entry.body_plain, &q_lc);
+                let snippet = build_snippet(&entry.body_chars, &entry.body_lower, &q_chars);
                 hits.push(SearchHit {
                     title: entry.title.clone(),
                     slug: entry.slug.clone(),
@@ -113,15 +117,11 @@ pub async fn search_handler(
     res
 }
 
-fn build_snippet(body: &str, q_lc: &str) -> String {
-    let body_chars: Vec<char> = body.chars().collect();
-    let body_lower: Vec<char> = body.to_lowercase().chars().collect();
-    let q_chars: Vec<char> = q_lc.chars().collect();
-
-    let hit = find_subsequence(&body_lower, &q_chars);
+fn build_snippet(body_chars: &[char], body_lower: &[char], needle: &[char]) -> String {
+    let hit = find_subsequence(body_lower, needle);
     let (start, end) = if let Some(pos) = hit {
         let start = pos.saturating_sub(40);
-        let end = (pos + q_chars.len() + 120).min(body_chars.len());
+        let end = (pos + needle.len() + 120).min(body_chars.len());
         (start, end)
     } else {
         (0, body_chars.len().min(160))
@@ -142,7 +142,7 @@ fn find_subsequence(haystack: &[char], needle: &[char]) -> Option<usize> {
 }
 
 fn client_ip_from_headers(headers: &HeaderMap) -> Option<String> {
-    if env::var("TRUST_PROXY").is_err() || env::var("TRUST_PROXY").unwrap() != "true" {
+    if !*TRUST_PROXY_ENABLED {
         return None;
     }
     if let Some(val) = headers.get("CF-Connecting-IP") {
@@ -250,6 +250,7 @@ pub async fn not_found_response() -> Response {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
   <title>404 Not Found</title>
   <style>
     body{margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:#e5e7eb;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}

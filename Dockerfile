@@ -21,8 +21,7 @@ RUN corepack enable && corepack prepare pnpm@10.24.0 --activate
 WORKDIR /app
 
 ENV RUSTC_WRAPPER=/usr/local/bin/sccache \
-    SCCACHE_DIR=/sccache \
-    RUSTFLAGS="-Clink-arg=-fuse-ld=mold -Z threads=$(nproc)"
+    SCCACHE_DIR=/sccache
 
 # cargo-chef for dependency caching (prebuilt musl binary)
 RUN curl -L https://github.com/LukeMathWalker/cargo-chef/releases/download/v0.1.73/cargo-chef-x86_64-unknown-linux-musl.tar.gz \
@@ -37,14 +36,14 @@ COPY src src
 COPY build build
 COPY content content
 COPY static static
-RUN cargo chef prepare --recipe-path recipe.json
+RUN RUSTFLAGS="-Clink-arg=-fuse-ld=mold -Zthreads=$(nproc)" cargo chef prepare --recipe-path recipe.json
 
 ########################################
 # Cook: build dependency layer
 ########################################
 FROM builder-base AS cook
 COPY --from=planner /app/recipe.json /app/recipe.json
-RUN --mount=type=cache,target=/sccache,sharing=locked cargo chef cook --release --recipe-path recipe.json
+RUN --mount=type=cache,target=/sccache,sharing=locked RUSTFLAGS="-Clink-arg=-fuse-ld=mold -Zthreads=$(nproc)" cargo chef cook --release --recipe-path recipe.json
 
 ########################################
 # Builder: app build

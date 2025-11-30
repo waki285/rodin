@@ -107,23 +107,28 @@ async fn cache_headers_middleware(
         return next.run(req).await;
     }
 
-    let path = req.uri().path().to_ascii_lowercase();
+    let path_owned = req.uri().path().to_string();
+    let ext_owned = path_owned.rsplit('.').next().map(str::to_string);
+    let ext = ext_owned.as_deref();
     let mut res = next.run(req).await;
 
-    let is_asset = path.starts_with("/assets/")
-        || path.ends_with(".css")
-        || path.ends_with(".js")
-        || path.ends_with(".png")
-        || path.ends_with(".jpg")
-        || path.ends_with(".jpeg")
-        || path.ends_with(".webp")
-        || path.ends_with(".avif")
-        || path.ends_with(".svg")
-        || path.ends_with(".ico")
-        || path.ends_with(".woff")
-        || path.ends_with(".woff2")
-        || path.ends_with(".typ")
-        || path.ends_with(".md");
+    let is_asset = path_owned.starts_with("/assets/")
+        || ext.map(|e| {
+            e.eq_ignore_ascii_case("css")
+                || e.eq_ignore_ascii_case("js")
+                || e.eq_ignore_ascii_case("png")
+                || e.eq_ignore_ascii_case("jpg")
+                || e.eq_ignore_ascii_case("jpeg")
+                || e.eq_ignore_ascii_case("webp")
+                || e.eq_ignore_ascii_case("avif")
+                || e.eq_ignore_ascii_case("svg")
+                || e.eq_ignore_ascii_case("ico")
+                || e.eq_ignore_ascii_case("woff")
+                || e.eq_ignore_ascii_case("woff2")
+                || e.eq_ignore_ascii_case("typ")
+                || e.eq_ignore_ascii_case("md")
+        })
+        .unwrap_or(false);
 
     if is_asset {
         // ダウンロードされるのを直す
@@ -133,7 +138,7 @@ async fn cache_headers_middleware(
             .map(|v| v == "application/octet-stream")
             .unwrap_or(true);
         if need_ct {
-            if let Some(ext) = path.rsplit('.').next() {
+            if let Some(ext) = ext {
                 if let Some(mime) = guess_mime(ext) {
                     if let Ok(val) = HeaderValue::from_str(mime) {
                         res.headers_mut()
