@@ -44,7 +44,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 ########################################
 FROM builder-base AS cook
 COPY --from=planner /app/recipe.json /app/recipe.json
-RUN --mount=type=cache,target=/sccache,sharing=locked cargo -Z threads=$(nproc) chef cook --release --recipe-path recipe.json
+RUN --mount=type=cache,target=/sccache,sharing=locked cargo chef cook --release --recipe-path recipe.json
 
 ########################################
 # Builder: app build
@@ -60,7 +60,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Build (build.rs runs Esbuild/Typst/pandoc as needed)
-RUN --mount=type=cache,target=/sccache,sharing=locked cargo -Z threads=$(nproc) build --release
+RUN --mount=type=cache,target=/sccache,sharing=locked cargo build --release
 
 ########################################
 # Runtime stage
