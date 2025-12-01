@@ -73,8 +73,10 @@ pub fn build_home(preamble_path: &str, generated_dir: &str) -> Result<()> {
     );
 
     let mut html = compile_typst(&preamble, &injected, &binaries)?;
-    html = html.replace("<p>POSTS_LIST_PLACEHOLDER</p>", &cards_html);
-    html = html.replace("POSTS_LIST_PLACEHOLDER", &cards_html);
+    html = html.replace(
+        "<p>POSTS_LIST_PLACEHOLDER</p>",
+        &format!("<div class=\"posts-list\">{}</div>", &cards_html),
+    );
 
     let html_path = out_dir.join("home.html");
     fs::write(&html_path, maybe_minify_html(html))?;
@@ -413,6 +415,7 @@ fn strip_preamble_import(source: &str) -> String {
 fn build_cards_html(metas: &[FrontMatter]) -> String {
     metas
         .iter()
+        .rev()
         .take(5)
         .map(|post| {
             let title = post.title.as_deref().unwrap_or(&post.slug);
@@ -450,13 +453,13 @@ fn build_cards_html(metas: &[FrontMatter]) -> String {
             };
 
                 format!(
-                "<article class=\"post-card space-y-2 border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white/90 dark:bg-slate-900/70 shadow-sm backdrop-blur\">\
-                    <div class=\"flex items-start justify-between gap-3\">\
-                        <a href=\"/blog/{slug}\" class=\"text-lg font-semibold text-slate-900 dark:text-slate-100 hover:text-sky-600 dark:hover:text-sky-400\">{title}</a>\
-                        <div class=\"text-xs text-slate-500 dark:text-slate-400 text-right\">{updated_html}</div>\
+                "<article class=\"post-card\">\
+                    <div>\
+                        <a href=\"/blog/{slug}\" class=\"not-prose\">{title}</a>\
+                        <div>{updated_html}</div>\
                     </div>\
-                    <div class=\"text-sm text-slate-700 dark:text-slate-300 line-clamp-2\">{description}</div>\
-                    <div class=\"text-sm text-slate-600 dark:text-slate-300\">{published_html}</div>\
+                    <div>{description}</div>\
+                    <div>{published_html}</div>\
                     {tags_html}\
                 </article>"
             )

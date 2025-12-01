@@ -5,35 +5,87 @@ use axum::{
     middleware::Next,
     response::{Html, IntoResponse, Redirect, Response},
 };
-use std::{env, net::SocketAddr, sync::LazyLock};
+use std::{
+    env,
+    net::SocketAddr,
+    sync::{LazyLock, OnceLock},
+};
 
-use super::{markdown_enabled, render::inject_runtime_tokens, state::AppState};
+use super::{
+    markdown_enabled,
+    render::inject_runtime_tokens,
+    state::{self, AppState, SharedAppState},
+};
 use crate::app::render::{render_search_page, SearchHit};
 
 const CSP_PREFIX: &str = "default-src 'self'; script-src 'self' 'nonce-";
 const CSP_SUFFIX: &str = "' static.cloudflareinsights.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; require-trusted-types-for 'script'";
 
-static TRUST_PROXY_ENABLED: LazyLock<bool> =
-        LazyLock::new(|| env::var("TRUST_PROXY").map(|v| v == "true").unwrap_or(false));
+static TRUST_PROXY_ENABLED: LazyLock<bool> = LazyLock::new(|| {
+    env::var("TRUST_PROXY")
+        .map(|v| v == "true")
+        .unwrap_or(false)
+});
+static RELOAD_TOKEN: OnceLock<Option<String>> = OnceLock::new();
 
-        pub async fn index_handler(
-    State(state): State<AppState>,
+fn reload_token() -> Option<&'static str> {
+    RELOAD_TOKEN
+        .get_or_init(|| env::var("RELOAD_TOKEN").ok())
+        .as_deref()
+}
+
+pub async fn reload_handler(
+    State(state): State<SharedAppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+) -> Response {
+    // トークンが設定されていればヘッダーで検証、無ければループバック限定
+    if let Some(token) = reload_token() {
+        let ok = headers
+            .get("X-Rodin-Reload-Token")
+            .and_then(|v| v.to_str().ok())
+            .map(|v| v == token)
+            .unwrap_or(false);
+        if !ok {
+            return (StatusCode::UNAUTHORIZED, "reload token required").into_response();
+        }
+    } else if !addr.ip().is_loopback() {
+        return (
+            StatusCode::FORBIDDEN,
+            "reload is allowed only from loopback without RELOAD_TOKEN",
+        )
+            .into_response();
+    }
+
+    match state::reload_state(&state).await {
+        Ok(()) => (StatusCode::OK, "reloaded").into_response(),
+        Err(e) => {
+            eprintln!("reload failed: {e:?}");
+            (StatusCode::INTERNAL_SERVER_ERROR, "reload failed").into_response()
+        }
+    }
+}
+
+pub async fn index_handler(
+    State(state): State<SharedAppState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Extension(nonce): Extension<String>,
 ) -> Response {
+    let state = state.read().await;
     let client_ip = client_ip_from_headers(&headers).unwrap_or_else(|| addr.ip().to_string());
     let html = inject_runtime_tokens(&state.prerender_top, &client_ip, &nonce);
     Html(html).into_response()
 }
 
 pub async fn blog_handler(
-    State(state): State<AppState>,
+    State(state): State<SharedAppState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Path(slug): Path<String>,
     headers: HeaderMap,
     Extension(nonce): Extension<String>,
 ) -> Response {
+    let state = state.read().await;
     let is_curl = is_curl(&headers);
     // Strip any number of trailing ".html" for lookup; redirect only for non-curl
     let mut slug_clean = slug.clone();
@@ -79,11 +131,12 @@ pub struct SearchQuery {
 }
 
 pub async fn search_handler(
-    State(state): State<AppState>,
+    State(state): State<SharedAppState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Extension(nonce): Extension<String>,
     Query(params): Query<SearchQuery>,
 ) -> Response {
+    let state = state.read().await;
     let client_ip = addr.ip().to_string();
     let q_raw = params.q.unwrap_or_default();
     let q = q_raw.trim();
@@ -175,22 +228,24 @@ fn is_curl(headers: &HeaderMap) -> bool {
 }
 
 pub async fn profile_handler(
-    State(state): State<AppState>,
+    State(state): State<SharedAppState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Extension(nonce): Extension<String>,
 ) -> Response {
+    let state = state.read().await;
     let client_ip = client_ip_from_headers(&headers).unwrap_or_else(|| addr.ip().to_string());
     let html = inject_runtime_tokens(&state.prerender_profile, &client_ip, &nonce);
     Html(html).into_response()
 }
 
 pub async fn pgp_handler(
-    State(state): State<AppState>,
+    State(state): State<SharedAppState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Extension(nonce): Extension<String>,
 ) -> Response {
+    let state = state.read().await;
     let client_ip = client_ip_from_headers(&headers).unwrap_or_else(|| addr.ip().to_string());
     let html = inject_runtime_tokens(&state.prerender_pgp, &client_ip, &nonce);
     Html(html).into_response()

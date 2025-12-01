@@ -79,7 +79,7 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="icon" href="/android-chrome-192x192.png" sizes="192x192" />
   <link rel="icon" href="/android-chrome-512x512.png" sizes="512x512" />
-  <style>{}</style>
+  <link rel="stylesheet" href="/assets/build/critical.css" />
   <link rel="stylesheet" href="/assets/build/lazy.css" data-unblock-css="1" media="print" />
   {head_links}
   <script nonce="{CSP_NONCE_TOKEN}">
@@ -96,7 +96,7 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
 <body>
 {body}
 </body>
-</html>"##, include_str!("../../static/build/critical.css")
+</html>"##
     )
 }
 
@@ -466,7 +466,9 @@ pub(crate) fn breadcrumb_registry(
     m.insert("home", ("ホーム", "/"));
     m.insert("profile", ("プロフィール", "/profile"));
     m.insert("blog", ("ブログ", "/blog"));
-    m.insert("rust", ("Rust", "/tags/rust"));
+    m.insert("tech", ("技術", "/tags/tech"));
+    m.insert("frontend", ("フロントエンド", "/tags/frontend"));
+    m.insert("backend", ("バックエンド", "/tags/backend"));
     m
 }
 

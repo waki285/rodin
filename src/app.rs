@@ -6,7 +6,11 @@ use axum::http::HeaderValue;
 use std::{convert::Infallible, env, sync::OnceLock};
 
 use axum::routing::get_service;
-use axum::{middleware, routing::get, Router};
+use axum::{
+    middleware,
+    routing::{get, post},
+    Router,
+};
 use tokio::net::TcpListener;
 use tower::service_fn;
 use tower_http::compression::CompressionLayer;
@@ -34,7 +38,7 @@ fn env_flag(key: &str, default: bool) -> bool {
 }
 
 pub async fn run() -> anyhow::Result<()> {
-    let app_state = state::build_prerendered_state().await?;
+    let app_state = state::build_shared_state().await?;
 
     let compression_enabled = env_flag("COMPRESSION_ENABLED", true);
 
@@ -49,6 +53,7 @@ pub async fn run() -> anyhow::Result<()> {
         .route("/pgp", get(handlers::pgp_handler))
         .route("/blog/{slug}", get(handlers::blog_handler))
         .route("/search", get(handlers::search_handler))
+        .route("/__admin/reload", post(handlers::reload_handler))
         .route_service(
             "/sitemap.xml",
             ServeFile::new("static/generated/sitemap.xml"),
@@ -113,22 +118,23 @@ async fn cache_headers_middleware(
     let mut res = next.run(req).await;
 
     let is_asset = path_owned.starts_with("/assets/")
-        || ext.map(|e| {
-            e.eq_ignore_ascii_case("css")
-                || e.eq_ignore_ascii_case("js")
-                || e.eq_ignore_ascii_case("png")
-                || e.eq_ignore_ascii_case("jpg")
-                || e.eq_ignore_ascii_case("jpeg")
-                || e.eq_ignore_ascii_case("webp")
-                || e.eq_ignore_ascii_case("avif")
-                || e.eq_ignore_ascii_case("svg")
-                || e.eq_ignore_ascii_case("ico")
-                || e.eq_ignore_ascii_case("woff")
-                || e.eq_ignore_ascii_case("woff2")
-                || e.eq_ignore_ascii_case("typ")
-                || e.eq_ignore_ascii_case("md")
-        })
-        .unwrap_or(false);
+        || ext
+            .map(|e| {
+                e.eq_ignore_ascii_case("css")
+                    || e.eq_ignore_ascii_case("js")
+                    || e.eq_ignore_ascii_case("png")
+                    || e.eq_ignore_ascii_case("jpg")
+                    || e.eq_ignore_ascii_case("jpeg")
+                    || e.eq_ignore_ascii_case("webp")
+                    || e.eq_ignore_ascii_case("avif")
+                    || e.eq_ignore_ascii_case("svg")
+                    || e.eq_ignore_ascii_case("ico")
+                    || e.eq_ignore_ascii_case("woff")
+                    || e.eq_ignore_ascii_case("woff2")
+                    || e.eq_ignore_ascii_case("typ")
+                    || e.eq_ignore_ascii_case("md")
+            })
+            .unwrap_or(false);
 
     if is_asset {
         // ダウンロードされるのを直す

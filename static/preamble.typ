@@ -43,6 +43,23 @@
   }
 }
 
+#let ghlink(..args) = context {
+  let pos = args.pos()
+  let named = args.named()
+
+  let path = pos.at(0)
+  let label = if pos.len() >= 2 { pos.at(1) } else { none }
+
+  let repo = named.at("repo", default: "waki285/rodin")
+  let branch = named.at("branch", default: "main")
+
+  let normalized = if path.starts-with("/") { path.slice(1) } else { path }
+  let url = "https://github.com/" + repo + "/blob/" + branch + "/" + normalized
+  let display = if label == none { normalized } else { label }
+
+  link(url)[#display]
+}
+
 #let img(src, alt: "", lazy: false, width: none, height: none) = context {
   if target() == "html" {
     html.elem("img", attrs: (

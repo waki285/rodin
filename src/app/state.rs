@@ -7,6 +7,7 @@ use std::{
 use futures::{stream, StreamExt, TryStreamExt};
 use regex::Regex;
 use tokio::fs;
+use tokio::sync::RwLock;
 
 use crate::frontmatter::FrontMatter;
 
@@ -29,6 +30,8 @@ pub struct AppState {
     pub(crate) blog_typs: Arc<HashMap<String, Arc<str>>>,
     pub(crate) search_index: Arc<Vec<SearchIndexEntry>>,
 }
+
+pub type SharedAppState = Arc<RwLock<AppState>>;
 
 #[derive(Clone)]
 pub struct SearchIndexEntry {
@@ -162,6 +165,19 @@ pub async fn build_prerendered_state() -> anyhow::Result<AppState> {
         blog_typs: Arc::new(blog_typs),
         search_index: Arc::new(search_entries),
     })
+}
+
+pub async fn build_shared_state() -> anyhow::Result<SharedAppState> {
+    let state = build_prerendered_state().await?;
+    Ok(Arc::new(RwLock::new(state)))
+}
+
+pub async fn reload_state(shared: &SharedAppState) -> anyhow::Result<()> {
+    // 先に新しい状態を構築してから書き換えることで、ロック時間を最小化する
+    let next = build_prerendered_state().await?;
+    let mut guard = shared.write().await;
+    *guard = next;
+    Ok(())
 }
 
 fn html_to_plain(html: &str) -> String {
