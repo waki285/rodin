@@ -3948,6 +3948,7 @@ dependencies = [
  "axum",
  "futures",
  "hb-subset",
+ "itertools 0.14.0",
  "leptos",
  "leptos_axum",
  "lightningcss",

@@ -31,6 +31,7 @@ futures = "0.3"
 [build-dependencies]
 anyhow = "1.0.100"
 hb-subset = "0.3.0"
+itertools = "0.14.0"
 lightningcss = { version = "1.0.0-alpha.68", features = ["browserslist"] }
 minify-html = "0.18.1"
 regex = "1.11"

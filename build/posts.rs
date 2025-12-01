@@ -6,6 +6,7 @@ use std::{collections::HashMap, fs, path::PathBuf};
 use typst_as_lib::{typst_kit_options::TypstKitFontOptions, TypstEngine};
 use typst_html::HtmlDocument;
 use typst_library::diag::SourceDiagnostic;
+use itertools::Itertools;
 
 use crate::frontmatter::FrontMatter;
 
@@ -415,7 +416,20 @@ fn strip_preamble_import(source: &str) -> String {
 fn build_cards_html(metas: &[FrontMatter]) -> String {
     metas
         .iter()
-        .rev()
+        // sort by updated_at desc
+        .sorted_by(|a, b| {
+            let a_time = a
+                .updated_at
+                .as_deref()
+                .or_else(|| a.published_at.as_deref())
+                .unwrap_or("");
+            let b_time = b
+                .updated_at
+                .as_deref()
+                .or_else(|| b.published_at.as_deref())
+                .unwrap_or("");
+            b_time.cmp(a_time)
+        })
         .take(5)
         .map(|post| {
             let title = post.title.as_deref().unwrap_or(&post.slug);
