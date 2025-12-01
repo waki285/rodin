@@ -6,7 +6,7 @@ use leptos::prelude::*;
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 
-#[cfg(debug_assertions)]
+#[cfg(not(debug_assertions))]
 use minify_html::{minify, Cfg as HtmlMinCfg};
 
 pub(crate) const CLIENT_IP_TOKEN: &str = "__CLIENT_IP_PLACEHOLDER__";
@@ -579,7 +579,7 @@ fn absolute_url(url: &str) -> String {
     }
 }
 
-#[cfg(debug_assertions)]
+#[cfg(not(debug_assertions))]
 fn maybe_minify(html: String) -> String {
     let cfg = HtmlMinCfg {
         minify_js: true,
@@ -590,7 +590,7 @@ fn maybe_minify(html: String) -> String {
     String::from_utf8(min).unwrap_or(html)
 }
 
-#[cfg(not(debug_assertions))]
+#[cfg(debug_assertions)]
 fn maybe_minify(html: String) -> String {
     html
 }
