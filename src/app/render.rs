@@ -6,7 +6,7 @@ use leptos::prelude::*;
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 
-#[cfg(not(debug_assertions))]
+#[cfg(debug_assertions)]
 use minify_html::{minify, Cfg as HtmlMinCfg};
 
 pub(crate) const CLIENT_IP_TOKEN: &str = "__CLIENT_IP_PLACEHOLDER__";
@@ -64,6 +64,7 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
 <head>
   <meta charset="utf-8" />
   <link rel="preload" href="/assets/build/critical.css" as="style" />
+  <link rel="preload" href="/assets/build/IBMPlexSansJP-Regular.subset.woff2" as="font" type="font/woff2" crossorigin />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title}</title>
   {meta_tags}
@@ -78,8 +79,7 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="icon" href="/android-chrome-192x192.png" sizes="192x192" />
   <link rel="icon" href="/android-chrome-512x512.png" sizes="512x512" />
-  <link rel="stylesheet" href="/assets/build/critical.css" />
-  <link rel="stylesheet" href="/assets/build/prose.css" />
+  <style>{}</style>
   <link rel="stylesheet" href="/assets/build/lazy.css" data-unblock-css="1" media="print" />
   {head_links}
   <script nonce="{CSP_NONCE_TOKEN}">
@@ -90,13 +90,13 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
       requestAnimationFrame(()=>{{if(l.sheet) enable();}});
     }});
   </script>
+  <script type="module" src="/assets/build/app.js" nonce="{CSP_NONCE_TOKEN}" defer></script>
   {head_scripts}
 </head>
 <body>
 {body}
-<script type="module" src="/assets/build/app.js" nonce="{CSP_NONCE_TOKEN}"></script>
 </body>
-</html>"##
+</html>"##, include_str!("../../static/build/critical.css")
     )
 }
 
@@ -112,6 +112,8 @@ pub(crate) fn prerender_top_page(home_html: &str) -> String {
         head_links: vec![
             // CSS for post cards on top page
             r#"<link rel="stylesheet" href="/assets/build/post-card.css" data-unblock-css="1" media="print" />"#.to_string(),
+            // prose-base.css for below-fold content (lazy loaded, minimal styles for top page)
+            r#"<link rel="stylesheet" href="/assets/build/prose-base.css" data-unblock-css="1" media="print" />"#.to_string(),
             // Preload low-res hero candidates by viewport width
             r#"<link rel="preload" as="image" type="image/avif" href="/assets/images/urumashi/urumashi-1280-low.avif" media="(max-width: 640px)" />"#.to_string(),
             r#"<link rel="preload" as="image" type="image/avif" href="/assets/images/urumashi/urumashi-1920-low.avif" media="(min-width: 641px) and (max-width: 1024px)" />"#.to_string(),
@@ -168,6 +170,10 @@ pub(crate) fn prerender_blog_page(meta: &FrontMatter, html_content: &str) -> Str
         } else {
             Some(structured_vec)
         },
+        head_links: vec![
+            r#"<link rel="stylesheet" href="/assets/build/prose-base.css" />"#.to_string(),
+            r#"<link rel="stylesheet" href="/assets/build/prose-full.css" />"#.to_string(),
+        ],
         ..Default::default()
     };
 
@@ -214,6 +220,10 @@ pub(crate) fn prerender_profile_page(meta: &FrontMatter, profile_html: &str) -> 
     let opts = HtmlOptions {
         meta: Some(meta_map),
         structured_data: Some(structured),
+        head_links: vec![
+            r#"<link rel="stylesheet" href="/assets/build/prose-base.css" />"#.to_string(),
+            r#"<link rel="stylesheet" href="/assets/build/prose-full.css" />"#.to_string(),
+        ],
         ..Default::default()
     };
     maybe_minify(wrap_html_with_options(
@@ -271,6 +281,10 @@ pub(crate) fn prerender_static_page(
     let opts = HtmlOptions {
         meta: Some(meta_map),
         structured_data: Some(structured),
+        head_links: vec![
+            r#"<link rel="stylesheet" href="/assets/build/prose-base.css" />"#.to_string(),
+            r#"<link rel="stylesheet" href="/assets/build/prose-full.css" />"#.to_string(),
+        ],
         ..Default::default()
     };
     maybe_minify(wrap_html_with_options(
@@ -565,7 +579,7 @@ fn absolute_url(url: &str) -> String {
     }
 }
 
-#[cfg(not(debug_assertions))]
+#[cfg(debug_assertions)]
 fn maybe_minify(html: String) -> String {
     let cfg = HtmlMinCfg {
         minify_js: true,
@@ -576,7 +590,7 @@ fn maybe_minify(html: String) -> String {
     String::from_utf8(min).unwrap_or(html)
 }
 
-#[cfg(debug_assertions)]
+#[cfg(not(debug_assertions))]
 fn maybe_minify(html: String) -> String {
     html
 }

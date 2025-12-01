@@ -32,3 +32,5 @@ static/build
 static/generated
 
 .DS_Store
+
+.serena

@@ -7,14 +7,11 @@ use std::{
 };
 
 const REGULAR_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-Regular.ttf";
-const MEDIUM_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-Medium.ttf";
 const SEMIBOLD_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-SemiBold.ttf";
 const BOLD_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-Bold.ttf";
 
 const REGULAR_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Regular.subset.ttf";
 const REGULAR_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Regular.subset.woff2";
-const MEDIUM_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Medium.subset.ttf";
-const MEDIUM_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Medium.subset.woff2";
 const SEMIBOLD_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Semibold.subset.ttf";
 const SEMIBOLD_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Semibold.subset.woff2";
 const BOLD_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Bold.subset.ttf";
@@ -32,7 +29,6 @@ pub fn subset_regular_font() -> Result<()> {
     println!("cargo:rerun-if-changed={REGULAR_FONT_SRC}");
     println!("cargo:rerun-if-changed={BOLD_FONT_SRC}");
     println!("cargo:rerun-if-changed={SEMIBOLD_FONT_SRC}");
-    println!("cargo:rerun-if-changed={MEDIUM_FONT_SRC}");
     println!("cargo:rerun-if-changed=content");
     for src in TEXT_SOURCES {
         println!("cargo:rerun-if-changed={src}");
@@ -44,12 +40,6 @@ pub fn subset_regular_font() -> Result<()> {
         return Ok(());
     }
 
-    subset_font(
-        MEDIUM_FONT_SRC,
-        MEDIUM_FONT_TTF_OUT,
-        MEDIUM_FONT_WOFF2_OUT,
-        &glyphs,
-    )?;
     subset_font(
         SEMIBOLD_FONT_SRC,
         SEMIBOLD_FONT_TTF_OUT,

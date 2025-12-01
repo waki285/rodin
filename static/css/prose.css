@@ -59,7 +59,7 @@
   }
   .prose :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
     color: var(--tw-prose-links);
-    font-weight: 500;
+    font-weight: 400;
     text-decoration: underline;
   }
   .prose
@@ -181,7 +181,7 @@
     margin-bottom: 1.6em;
     padding-inline-start: 1em;
     font-style: italic;
-    font-weight: 500;
+    font-weight: 400;
   }
   .prose
     :where(blockquote p:first-of-type):not(
@@ -282,7 +282,7 @@
     padding-inline-start: 0.375em;
     font-family: inherit;
     font-size: 0.875em;
-    font-weight: 500;
+    font-weight: 400;
   }
   .prose
     :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
