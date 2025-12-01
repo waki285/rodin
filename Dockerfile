@@ -65,7 +65,7 @@ RUN --mount=type=cache,target=/sccache,sharing=locked cargo build --release
 ########################################
 # Runtime stage
 ########################################
-FROM rustlang/rust-nightly:slim AS runtime
+FROM rustlang/rust:nightly-slim AS runtime
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates git && \
