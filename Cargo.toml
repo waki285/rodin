@@ -13,6 +13,7 @@ path = "src/bin/rodin_content.rs"
 [dependencies]
 anyhow = "1.0.100"
 axum = "0.8.7"
+itertools = "0.14.0"
 leptos = { version = "0.8.14", default-features = false, features = ["ssr"] }
 leptos_axum = "0.8.7"
 minify-html = "0.18.1"
