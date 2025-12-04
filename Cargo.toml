@@ -25,8 +25,8 @@ tokio = { version = "1.48", features = ["macros", "rt-multi-thread", "signal", "
 tower = { version = "0.5.2", features = ["tokio", "util"] }
 tower-http = { version = "0.6", features = ["fs", "compression-br", "compression-gzip"] }
 typst-as-lib = { version = "0.15.0", features = ["typst-kit-fonts", "typst-kit-embed-fonts", "typst-html"] }
-typst-html = "0.14.0"
-typst-library = "0.14.0"
+typst-html = "0.14.1"
+typst-library = "0.14.1"
 futures = "0.3"
 
 [build-dependencies]
@@ -38,10 +38,10 @@ minify-html = "0.18.1"
 regex = "1.11"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0"
-typst = "0.14.0"
+typst = "0.14.1"
 typst-as-lib = { version = "0.15.0", features = ["typst-kit-fonts", "typst-kit-embed-fonts", "typst-html"] }
-typst-html = "0.14.0"
-typst-library = "0.14.0"
+typst-html = "0.14.1"
+typst-library = "0.14.1"
 sha2 = "0.10"
 hex = "0.4"
 
