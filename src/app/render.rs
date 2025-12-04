@@ -123,6 +123,8 @@ pub(crate) fn prerender_top_page(home_html: &str) -> String {
             r#"<link rel="preload" as="image" type="image/avif" href="/assets/images/urumashi/urumashi-1280-low.avif" media="(max-width: 640px)" />"#.to_string(),
             r#"<link rel="preload" as="image" type="image/avif" href="/assets/images/urumashi/urumashi-1920-low.avif" media="(min-width: 641px) and (max-width: 1024px)" />"#.to_string(),
             r#"<link rel="preload" as="image" type="image/avif" href="/assets/images/urumashi/urumashi-2560-low.avif" media="(min-width: 1025px)" />"#.to_string(),
+            // Prefetch home.js for dynamic import
+            format!(r#"<link rel="prefetch" href="{href}" as="script" />"#, href=asset_url("/assets/build/home.js")),
         ],
         head_scripts: vec![],
     };
