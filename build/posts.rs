@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use itertools::Itertools;
 #[cfg(not(debug_assertions))]
 use minify_html::{minify, Cfg as HtmlMinCfg};
 use rayon::prelude::*;
@@ -7,13 +8,14 @@ use std::{collections::HashMap, fs, path::PathBuf, sync::LazyLock};
 use typst_as_lib::{typst_kit_options::TypstKitFontOptions, TypstEngine};
 use typst_html::HtmlDocument;
 use typst_library::diag::SourceDiagnostic;
-use itertools::Itertools;
 
 use crate::frontmatter::FrontMatter;
 
 // 静的Regex（毎回コンパイルを避ける）
-static META_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new("(?is)<meta[^>]*>").expect("valid regex"));
-static BODY_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new("(?is)<body[^>]*>(.*?)</body>").expect("valid regex"));
+static META_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("(?is)<meta[^>]*>").expect("valid regex"));
+static BODY_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("(?is)<body[^>]*>(.*?)</body>").expect("valid regex"));
 static TAG_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new("<[^>]+>").expect("valid regex"));
 
 pub fn build_posts(preamble_path: &str, generated_dir: &str) -> Result<Vec<FrontMatter>> {
@@ -440,12 +442,12 @@ fn build_cards_html(metas: &[FrontMatter]) -> String {
             let a_time = a
                 .published_at
                 .as_deref()
-                .or_else(|| a.updated_at.as_deref())
+                .or(a.updated_at.as_deref())
                 .unwrap_or("");
             let b_time = b
                 .published_at
                 .as_deref()
-                .or_else(|| b.updated_at.as_deref())
+                .or(b.updated_at.as_deref())
                 .unwrap_or("");
             b_time.cmp(a_time)
         })
@@ -485,7 +487,7 @@ fn build_cards_html(metas: &[FrontMatter]) -> String {
                 String::new()
             };
 
-                format!(
+            format!(
                 "<article class=\"post-card\">\
                     <div>\
                         <a href=\"/blog/{slug}\" class=\"not-prose\">{title}</a>\

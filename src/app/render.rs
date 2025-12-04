@@ -1,3 +1,4 @@
+use crate::asset::asset_url;
 use crate::{
     components::{BlogPage, TopPage},
     frontmatter::FrontMatter,
@@ -5,7 +6,6 @@ use crate::{
 use leptos::prelude::*;
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
-use crate::asset::asset_url;
 
 #[cfg(not(debug_assertions))]
 use minify_html::{minify, Cfg as HtmlMinCfg};
@@ -178,8 +178,14 @@ pub(crate) fn prerender_blog_page(meta: &FrontMatter, html_content: &str) -> Str
             Some(structured_vec)
         },
         head_links: vec![
-            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/prose-base.css")),
-            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/prose-full.css")),
+            format!(
+                r#"<link rel="stylesheet" href="{href}" />"#,
+                href = asset_url("/assets/build/prose-base.css")
+            ),
+            format!(
+                r#"<link rel="stylesheet" href="{href}" />"#,
+                href = asset_url("/assets/build/prose-full.css")
+            ),
         ],
         ..Default::default()
     };
@@ -228,8 +234,14 @@ pub(crate) fn prerender_profile_page(meta: &FrontMatter, profile_html: &str) -> 
         meta: Some(meta_map),
         structured_data: Some(structured),
         head_links: vec![
-            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/prose-base.css")),
-            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/prose-full.css")),
+            format!(
+                r#"<link rel="stylesheet" href="{href}" />"#,
+                href = asset_url("/assets/build/prose-base.css")
+            ),
+            format!(
+                r#"<link rel="stylesheet" href="{href}" />"#,
+                href = asset_url("/assets/build/prose-full.css")
+            ),
         ],
         ..Default::default()
     };
@@ -289,8 +301,14 @@ pub(crate) fn prerender_static_page(
         meta: Some(meta_map),
         structured_data: Some(structured),
         head_links: vec![
-            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/prose-base.css")),
-            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/prose-full.css")),
+            format!(
+                r#"<link rel="stylesheet" href="{href}" />"#,
+                href = asset_url("/assets/build/prose-base.css")
+            ),
+            format!(
+                r#"<link rel="stylesheet" href="{href}" />"#,
+                href = asset_url("/assets/build/prose-full.css")
+            ),
         ],
         ..Default::default()
     };
@@ -323,9 +341,10 @@ pub(crate) fn render_search_page(
     meta.insert("robots".to_string(), "noindex, nofollow".to_string());
     let opts = HtmlOptions {
         meta: Some(meta),
-        head_links: vec![
-            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/search.css")),
-        ],
+        head_links: vec![format!(
+            r#"<link rel="stylesheet" href="{href}" />"#,
+            href = asset_url("/assets/build/search.css")
+        )],
         ..Default::default()
     };
     let html = wrap_html_with_options(&rendered, "検索｜すずねーう", &opts);
@@ -334,14 +353,15 @@ pub(crate) fn render_search_page(
 
 pub(crate) fn inject_runtime_tokens(template: &str, client_ip: &str, nonce: &str) -> String {
     // 1パスで両方のトークンを置換（2回のString::replaceより効率的）
-    let mut result = String::with_capacity(template.len() + (nonce.len() - CSP_NONCE_TOKEN.len()) * 10);
+    let mut result =
+        String::with_capacity(template.len() + (nonce.len() - CSP_NONCE_TOKEN.len()) * 10);
     let mut remaining = template;
-    
+
     while !remaining.is_empty() {
         // 次のトークンを探す
         let ip_pos = remaining.find(CLIENT_IP_TOKEN);
         let nonce_pos = remaining.find(CSP_NONCE_TOKEN);
-        
+
         match (ip_pos, nonce_pos) {
             (Some(ip), Some(nc)) if ip < nc => {
                 result.push_str(&remaining[..ip]);
@@ -369,7 +389,7 @@ pub(crate) fn inject_runtime_tokens(template: &str, client_ip: &str, nonce: &str
             }
         }
     }
-    
+
     result
 }
 

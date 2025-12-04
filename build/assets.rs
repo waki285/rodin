@@ -2,9 +2,9 @@ use anyhow::{anyhow, Result};
 use lightningcss::stylesheet::{MinifyOptions, ParserOptions, PrinterOptions, StyleSheet};
 use lightningcss::targets::{Browsers, Targets};
 use regex::Regex;
-use sha2::{Digest, Sha256};
 use serde_json::json;
-use std::{fs, path::PathBuf, process::Command, collections::HashMap};
+use sha2::{Digest, Sha256};
+use std::{collections::HashMap, fs, path::PathBuf, process::Command};
 
 pub fn minify_assets() -> Result<()> {
     let out_dir = PathBuf::from("static/build");
@@ -68,7 +68,10 @@ pub fn minify_assets() -> Result<()> {
         let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("style");
         let hashed_name = format!("{}-{}.css", stem, hash);
         fs::write(out_dir.join(&hashed_name), min)?;
-        manifest.insert(format!("/assets/build/{}", file_str), format!("/assets/build/{}", hashed_name));
+        manifest.insert(
+            format!("/assets/build/{}", file_str),
+            format!("/assets/build/{}", hashed_name),
+        );
     }
 
     // Step 3: Process home.js first so we can replace references in app.js
@@ -104,7 +107,10 @@ pub fn minify_assets() -> Result<()> {
         let hash = short_hash(&bytes);
         let hashed_name = format!("home-{}.js", hash);
         fs::rename(&tmp_dst, out_dir.join(&hashed_name))?;
-        manifest.insert("/assets/build/home.js".to_string(), format!("/assets/build/{}", hashed_name));
+        manifest.insert(
+            "/assets/build/home.js".to_string(),
+            format!("/assets/build/{}", hashed_name),
+        );
         home_js_hashed = Some(hashed_name);
     }
 
@@ -140,7 +146,10 @@ pub fn minify_assets() -> Result<()> {
         // Replace home.js reference with hashed version
         let mut content = fs::read_to_string(&tmp_dst)?;
         if let Some(ref hashed) = home_js_hashed {
-            content = content.replace("/assets/build/home.js", &format!("/assets/build/{}", hashed));
+            content = content.replace(
+                "/assets/build/home.js",
+                &format!("/assets/build/{}", hashed),
+            );
         }
 
         // Compute hash of final content and write
@@ -148,14 +157,20 @@ pub fn minify_assets() -> Result<()> {
         let hashed_name = format!("app-{}.js", hash);
         fs::write(out_dir.join(&hashed_name), &content)?;
         fs::remove_file(&tmp_dst)?;
-        manifest.insert("/assets/build/app.js".to_string(), format!("/assets/build/{}", hashed_name));
+        manifest.insert(
+            "/assets/build/app.js".to_string(),
+            format!("/assets/build/{}", hashed_name),
+        );
     }
 
     // write manifest
     let gen_dir = PathBuf::from("static/generated");
     fs::create_dir_all(&gen_dir)?;
     let manifest_path = gen_dir.join("assets-manifest.json");
-    fs::write(manifest_path, serde_json::to_string_pretty(&json!(manifest))?)?;
+    fs::write(
+        manifest_path,
+        serde_json::to_string_pretty(&json!(manifest))?,
+    )?;
 
     Ok(())
 }
@@ -191,7 +206,7 @@ fn short_hash(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
     let res = hasher.finalize();
-    hex::encode(&res)[..12].to_string()
+    hex::encode(res)[..12].to_string()
 }
 
 fn split_name(name: &str) -> (String, String) {

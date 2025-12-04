@@ -13,5 +13,8 @@ static MANIFEST: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
 /// Resolve an asset path using generated manifest. If manifest missing or key not found,
 /// returns the original `path`.
 pub fn asset_url(path: &str) -> String {
-    MANIFEST.get(path).cloned().unwrap_or_else(|| path.to_string())
+    MANIFEST
+        .get(path)
+        .cloned()
+        .unwrap_or_else(|| path.to_string())
 }
