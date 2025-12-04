@@ -45,6 +45,7 @@ fn main() -> Result<()> {
     println!("cargo:rerun-if-changed=src");
     println!("cargo:rerun-if-changed=content");
     println!("cargo:rerun-if-changed=static/app.js");
+    println!("cargo:rerun-if-changed=static/home.js");
     println!("cargo:rerun-if-changed=static/css");
     println!("cargo:rerun-if-changed={PREAMBLE_PATH}");
     println!("cargo:rerun-if-changed={PANDOC_FILTER}");
