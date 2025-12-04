@@ -213,16 +213,17 @@ async fn cache_headers_middleware(
     res
 }
 
-/// Check if filename contains a content hash (e.g., app-a1b2c3d4.js)
+/// Check if filename contains a content hash (e.g., app-a1b2c3d4.js or font.subset-0ae176d131d7.woff2)
 fn is_hashed_filename(path: &str) -> bool {
     // Extract filename from path
     let filename = path.rsplit('/').next().unwrap_or(path);
-    // Pattern: name-HASH.ext where HASH is 8 hex chars
+    // Pattern: name-HASH.ext where HASH is 8 or 12 hex chars
     if let Some(dot_pos) = filename.rfind('.') {
         let name_part = &filename[..dot_pos];
         if let Some(dash_pos) = name_part.rfind('-') {
             let potential_hash = &name_part[dash_pos + 1..];
-            return potential_hash.len() == 8
+            let len = potential_hash.len();
+            return (len == 8 || len == 12)
                 && potential_hash.chars().all(|c| c.is_ascii_hexdigit());
         }
     }
