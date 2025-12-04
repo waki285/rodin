@@ -147,21 +147,48 @@
     initCopyButtons();
   }
 
-  // Lazy-load home-only script after parse to shrink the critical path.
+  // Lazy-load home-only script after LCP to avoid blocking critical rendering.
   if (window.location.pathname === "/") {
     const loadHomeJs = () => import("/assets/build/home.js").catch(() => {});
-    const scheduleHome = () => {
-      if ("requestIdleCallback" in window) {
-        requestIdleCallback(loadHomeJs, { timeout: 1500 });
+    
+    // Wait for LCP, then load home.js
+    const scheduleAfterLCP = () => {
+      if ("PerformanceObserver" in window) {
+        let lcpFired = false;
+        const observer = new PerformanceObserver((list) => {
+          // LCP entries are reported; the last one is the actual LCP
+          const entries = list.getEntries();
+          if (entries.length > 0 && !lcpFired) {
+            lcpFired = true;
+            observer.disconnect();
+            // Small delay after LCP to ensure paint is complete
+            requestAnimationFrame(() => {
+              setTimeout(loadHomeJs, 0);
+            });
+          }
+        });
+        observer.observe({ type: "largest-contentful-paint", buffered: true });
+        
+        // Fallback: if LCP doesn't fire within 5s, load anyway
+        setTimeout(() => {
+          if (!lcpFired) {
+            lcpFired = true;
+            observer.disconnect();
+            loadHomeJs();
+          }
+        }, 5000);
       } else {
-        setTimeout(loadHomeJs, 0);
+        // Fallback for browsers without PerformanceObserver
+        if (document.readyState === "complete") {
+          requestIdleCallback ? requestIdleCallback(loadHomeJs, { timeout: 1500 }) : setTimeout(loadHomeJs, 0);
+        } else {
+          window.addEventListener("load", () => {
+            requestIdleCallback ? requestIdleCallback(loadHomeJs, { timeout: 1500 }) : setTimeout(loadHomeJs, 0);
+          }, { once: true });
+        }
       }
     };
 
-    if (document.readyState === "complete") {
-      scheduleHome();
-    } else {
-      window.addEventListener("load", scheduleHome, { once: true });
-    }
+    scheduleAfterLCP();
   }
 })();
