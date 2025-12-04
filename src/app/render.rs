@@ -68,8 +68,8 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-    <link rel="preload" href="{critical}" as="style" />
-    <link rel="preload" href="{font_preload}" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="{font_preload}" as="font" type="font/woff2" />
+  <link rel="preload" href="{critical}" as="style" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title}</title>
   {meta_tags}
@@ -84,8 +84,8 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="icon" href="/android-chrome-192x192.png" sizes="192x192" />
   <link rel="icon" href="/android-chrome-512x512.png" sizes="512x512" />
-    <link rel="stylesheet" href="{critical}" />
-    <link rel="stylesheet" href="{lazy_css}" data-unblock-css="1" media="print" />
+  <link rel="stylesheet" href="{critical}" />
+  <link rel="stylesheet" href="{lazy_css}" data-unblock-css="1" media="print" />
   {head_links}
   <script nonce="{CSP_NONCE_TOKEN}">
     const links=[...document.querySelectorAll('link[data-unblock-css=\"1\"]')];
@@ -95,7 +95,7 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
       requestAnimationFrame(()=>{{if(l.sheet) enable();}});
     }});
   </script>
-    <script type="module" src="{app_js}" nonce="{CSP_NONCE_TOKEN}" defer></script>
+  <script type="module" src="{app_js}" nonce="{CSP_NONCE_TOKEN}" defer></script>
   {head_scripts}
 </head>
 <body>
