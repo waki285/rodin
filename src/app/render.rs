@@ -333,9 +333,44 @@ pub(crate) fn render_search_page(
 }
 
 pub(crate) fn inject_runtime_tokens(template: &str, client_ip: &str, nonce: &str) -> String {
-    template
-        .replace(CLIENT_IP_TOKEN, client_ip)
-        .replace(CSP_NONCE_TOKEN, nonce)
+    // 1パスで両方のトークンを置換（2回のString::replaceより効率的）
+    let mut result = String::with_capacity(template.len() + (nonce.len() - CSP_NONCE_TOKEN.len()) * 10);
+    let mut remaining = template;
+    
+    while !remaining.is_empty() {
+        // 次のトークンを探す
+        let ip_pos = remaining.find(CLIENT_IP_TOKEN);
+        let nonce_pos = remaining.find(CSP_NONCE_TOKEN);
+        
+        match (ip_pos, nonce_pos) {
+            (Some(ip), Some(nc)) if ip < nc => {
+                result.push_str(&remaining[..ip]);
+                result.push_str(client_ip);
+                remaining = &remaining[ip + CLIENT_IP_TOKEN.len()..];
+            }
+            (Some(ip), Some(nc)) if nc < ip => {
+                result.push_str(&remaining[..nc]);
+                result.push_str(nonce);
+                remaining = &remaining[nc + CSP_NONCE_TOKEN.len()..];
+            }
+            (Some(ip), None) => {
+                result.push_str(&remaining[..ip]);
+                result.push_str(client_ip);
+                remaining = &remaining[ip + CLIENT_IP_TOKEN.len()..];
+            }
+            (None, Some(nc)) => {
+                result.push_str(&remaining[..nc]);
+                result.push_str(nonce);
+                remaining = &remaining[nc + CSP_NONCE_TOKEN.len()..];
+            }
+            _ => {
+                result.push_str(remaining);
+                break;
+            }
+        }
+    }
+    
+    result
 }
 
 fn render_meta_tags(meta: &HashMap<String, String>) -> String {

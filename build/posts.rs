@@ -1,8 +1,9 @@
 use anyhow::{anyhow, Result};
 #[cfg(not(debug_assertions))]
 use minify_html::{minify, Cfg as HtmlMinCfg};
+use rayon::prelude::*;
 use regex::Regex;
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf, sync::LazyLock};
 use typst_as_lib::{typst_kit_options::TypstKitFontOptions, TypstEngine};
 use typst_html::HtmlDocument;
 use typst_library::diag::SourceDiagnostic;
@@ -10,40 +11,59 @@ use itertools::Itertools;
 
 use crate::frontmatter::FrontMatter;
 
+// 静的Regex（毎回コンパイルを避ける）
+static META_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new("(?is)<meta[^>]*>").expect("valid regex"));
+static BODY_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new("(?is)<body[^>]*>(.*?)</body>").expect("valid regex"));
+static TAG_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new("<[^>]+>").expect("valid regex"));
+
 pub fn build_posts(preamble_path: &str, generated_dir: &str) -> Result<Vec<FrontMatter>> {
     let out_dir = PathBuf::from(generated_dir);
     fs::create_dir_all(&out_dir)?;
     let binaries = load_binary_assets()?;
     let preamble = load_preamble(preamble_path);
 
-    let mut index = Vec::new();
-    for entry in fs::read_dir("content")? {
-        let entry = entry?;
-        if entry.path().extension().and_then(|s| s.to_str()) != Some("typ") {
-            continue;
-        }
-        let slug = entry
-            .path()
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap()
-            .to_string();
-        // 下書きとかメタコンテンツとか
-        if slug.starts_with('_') {
-            continue;
-        }
-        let raw = fs::read_to_string(entry.path())?;
-        let (meta, body) = parse_front_matter(&slug, &raw);
-        let body_clean = strip_preamble_import(&body);
-        let html = compile_typst(&preamble, &body_clean, &binaries)?;
+    // エントリを収集
+    let entries: Vec<_> = fs::read_dir("content")?
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("typ"))
+        .filter(|e| {
+            e.path()
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .map(|s| !s.starts_with('_'))
+                .unwrap_or(false)
+        })
+        .collect();
 
-        let html_path = out_dir.join(format!("{slug}.html"));
-        fs::write(&html_path, maybe_minify_html(html.clone()))?;
+    // 並列コンパイル
+    let results: Vec<Result<FrontMatter>> = entries
+        .par_iter()
+        .map(|entry| {
+            let slug = entry
+                .path()
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap()
+                .to_string();
+            let raw = fs::read_to_string(entry.path())?;
+            let (meta, body) = parse_front_matter(&slug, &raw);
+            let body_clean = strip_preamble_import(&body);
+            let html = compile_typst(&preamble, &body_clean, &binaries)?;
 
-        let mut meta_out = meta.clone();
-        meta_out.html = format!("generated/{slug}.html");
-        meta_out.reading_minutes = Some(estimate_reading_minutes(&html));
-        index.push(meta_out);
+            let html_path = out_dir.join(format!("{slug}.html"));
+            fs::write(&html_path, maybe_minify_html(html.clone()))?;
+
+            let mut meta_out = meta.clone();
+            meta_out.html = format!("generated/{slug}.html");
+            meta_out.reading_minutes = Some(estimate_reading_minutes(&html));
+            Ok(meta_out)
+        })
+        .collect();
+
+    // エラーチェックと収集
+    let mut index = Vec::with_capacity(results.len());
+    for result in results {
+        index.push(result?);
     }
 
     println!("cargo:warning=generated {} posts", index.len());
@@ -294,10 +314,8 @@ fn format_diagnostics(diags: &[SourceDiagnostic]) -> String {
 }
 
 fn postprocess_typst_html(raw: &str) -> String {
-    let meta_re = Regex::new("(?is)<meta[^>]*>").expect("valid regex");
-    let cleaned = meta_re.replace_all(raw, "");
-    let body_re = Regex::new("(?is)<body[^>]*>(.*?)</body>").expect("valid regex");
-    let content = body_re
+    let cleaned = META_RE.replace_all(raw, "");
+    let content = BODY_RE
         .captures(&cleaned)
         .and_then(|c| c.get(1))
         .map(|m| m.as_str())
@@ -307,8 +325,7 @@ fn postprocess_typst_html(raw: &str) -> String {
 
 fn estimate_reading_minutes(html: &str) -> u32 {
     // crude: strip tags, count non-whitespace chars; assume 500 chars/min, min 1 min
-    let tag_re = Regex::new("<[^>]+>").expect("valid regex");
-    let text = tag_re.replace_all(html, " ");
+    let text = TAG_RE.replace_all(html, " ");
     let chars = text.chars().filter(|c| !c.is_whitespace()).count();
     let per_min = 500usize;
     let mins = chars.div_ceil(per_min);
@@ -333,6 +350,7 @@ fn maybe_minify_html(html: String) -> String {
 }
 
 fn load_binary_assets() -> Result<Vec<(String, Vec<u8>)>> {
+    use std::sync::Arc;
     let mut bins = Vec::new();
     let images_dir = PathBuf::from("static/images");
     if images_dir.exists() {
@@ -345,7 +363,7 @@ fn load_binary_assets() -> Result<Vec<(String, Vec<u8>)>> {
                         ext.to_lowercase().as_str(),
                         "png" | "jpg" | "jpeg" | "svg" | "gif" | "webp"
                     ) {
-                        let bytes = fs::read(&path)?;
+                        let bytes = Arc::new(fs::read(&path)?);
                         let fname = path.file_name().unwrap().to_string_lossy().to_string();
                         let variants = [
                             fname.clone(),
@@ -355,7 +373,7 @@ fn load_binary_assets() -> Result<Vec<(String, Vec<u8>)>> {
                             format!("./static/images/{fname}"),
                         ];
                         for v in variants {
-                            bins.push((v, bytes.clone()));
+                            bins.push((v, (*bytes).clone()));
                         }
                     }
                 }
@@ -379,6 +397,7 @@ fn load_binary_assets() -> Result<Vec<(String, Vec<u8>)>> {
     let gen_index = PathBuf::from("static/generated/index.json");
     if gen_index.exists() {
         if let Ok(bytes) = fs::read(&gen_index) {
+            let bytes = Arc::new(bytes);
             let variants = [
                 "static/generated/index.json".to_string(),
                 "/static/generated/index.json".to_string(),
@@ -386,7 +405,7 @@ fn load_binary_assets() -> Result<Vec<(String, Vec<u8>)>> {
                 "generated/index.json".to_string(),
             ];
             for v in variants {
-                bins.push((v, bytes.clone()));
+                bins.push((v, (*bytes).clone()));
             }
         }
     }
