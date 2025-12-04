@@ -416,17 +416,17 @@ fn strip_preamble_import(source: &str) -> String {
 fn build_cards_html(metas: &[FrontMatter]) -> String {
     metas
         .iter()
-        // sort by updated_at desc
+        // sort by published_at desc
         .sorted_by(|a, b| {
             let a_time = a
-                .updated_at
+                .published_at
                 .as_deref()
-                .or_else(|| a.published_at.as_deref())
+                .or_else(|| a.updated_at.as_deref())
                 .unwrap_or("");
             let b_time = b
-                .updated_at
+                .published_at
                 .as_deref()
-                .or_else(|| b.published_at.as_deref())
+                .or_else(|| b.updated_at.as_deref())
                 .unwrap_or("");
             b_time.cmp(a_time)
         })
@@ -447,7 +447,7 @@ fn build_cards_html(metas: &[FrontMatter]) -> String {
             let tags_html = if !tags.is_empty() {
                 let chips: String = tags
                     .iter()
-                    .map(|t| format!("<span class=\"px-2 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200\">#{}</span>", t))
+                    .map(|t| format!("<span>#{}</span>", t))
                     .collect::<Vec<_>>()
                     .join("");
                 format!("<div class=\"flex flex-wrap gap-2 pt-1\">{chips}</div>")
