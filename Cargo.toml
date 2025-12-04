@@ -15,7 +15,6 @@ anyhow = "1.0.100"
 axum = "0.8.7"
 itertools = "0.14.0"
 leptos = { version = "0.8.14", default-features = false, features = ["ssr"] }
-leptos_axum = "0.8.7"
 minify-html = "0.18.1"
 rand = "0.9.2"
 regex = "1.11"
@@ -38,7 +37,6 @@ minify-html = "0.18.1"
 regex = "1.11"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0"
-typst = "0.14.1"
 typst-as-lib = { version = "0.15.0", features = ["typst-kit-fonts", "typst-kit-embed-fonts", "typst-html"] }
 typst-html = "0.14.1"
 typst-library = "0.14.1"
