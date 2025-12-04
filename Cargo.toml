@@ -42,6 +42,8 @@ typst = "0.14.0"
 typst-as-lib = { version = "0.15.0", features = ["typst-kit-fonts", "typst-kit-embed-fonts", "typst-html"] }
 typst-html = "0.14.0"
 typst-library = "0.14.0"
+sha2 = "0.10"
+hex = "0.4"
 
 [profile.release]
 lto = true

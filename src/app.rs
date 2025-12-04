@@ -136,6 +136,20 @@ async fn cache_headers_middleware(
             })
             .unwrap_or(false);
 
+    // Check if path contains content hash (e.g., app-a1b2c3d4.js)
+    let is_hashed_asset = is_asset && is_hashed_filename(&path_owned);
+    let is_image = ext
+        .map(|e| {
+            e.eq_ignore_ascii_case("png")
+                || e.eq_ignore_ascii_case("jpg")
+                || e.eq_ignore_ascii_case("jpeg")
+                || e.eq_ignore_ascii_case("webp")
+                || e.eq_ignore_ascii_case("avif")
+                || e.eq_ignore_ascii_case("svg")
+                || e.eq_ignore_ascii_case("ico")
+        })
+        .unwrap_or(false);
+
     if is_asset {
         // ダウンロードされるのを直す
         let need_ct = res
@@ -165,13 +179,26 @@ async fn cache_headers_middleware(
                 }
             }
         }
-        let cc = "public, max-age=300, stale-while-revalidate=604800";
+        // Cache-Control based on asset type
+        let cc = if is_hashed_asset {
+            // Hashed assets: immutable, 1 year
+            "public, max-age=31536000, immutable"
+        } else if is_image {
+            // Images without hash: medium cache (1 week) with revalidation
+            "public, max-age=604800, stale-while-revalidate=86400"
+        } else {
+            // Other assets: short cache with revalidation
+            "public, max-age=300, stale-while-revalidate=604800"
+        };
         if let Ok(val) = HeaderValue::from_str(cc) {
             res.headers_mut()
                 .insert(axum::http::header::CACHE_CONTROL, val);
         }
-        if let Ok(val) = HeaderValue::from_str(&format!("W/\"{}\"", GIT_HASH)) {
-            res.headers_mut().insert(axum::http::header::ETAG, val);
+        // ETag only for non-hashed assets (hashed ones don't need it)
+        if !is_hashed_asset {
+            if let Ok(val) = HeaderValue::from_str(&format!("W/\"{}\"", GIT_HASH)) {
+                res.headers_mut().insert(axum::http::header::ETAG, val);
+            }
         }
         res.headers_mut().insert(
             axum::http::header::VARY,
@@ -185,6 +212,22 @@ async fn cache_headers_middleware(
         }
     }
     res
+}
+
+/// Check if filename contains a content hash (e.g., app-a1b2c3d4.js)
+fn is_hashed_filename(path: &str) -> bool {
+    // Extract filename from path
+    let filename = path.rsplit('/').next().unwrap_or(path);
+    // Pattern: name-HASH.ext where HASH is 8 hex chars
+    if let Some(dot_pos) = filename.rfind('.') {
+        let name_part = &filename[..dot_pos];
+        if let Some(dash_pos) = name_part.rfind('-') {
+            let potential_hash = &name_part[dash_pos + 1..];
+            return potential_hash.len() == 8
+                && potential_hash.chars().all(|c| c.is_ascii_hexdigit());
+        }
+    }
+    false
 }
 
 fn guess_mime(ext: &str) -> Option<&'static str> {

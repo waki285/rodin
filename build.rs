@@ -51,8 +51,9 @@ fn main() -> Result<()> {
 
     println!("cargo:rustc-env={MARKDOWN_ENV_KEY}=false");
 
-    assets::minify_assets()?;
+    // フォントを先に生成してから、アセット処理（ハッシュ化含む）を行う
     fonts::subset_regular_font()?;
+    assets::minify_assets()?;
 
     let mut metas = posts::build_posts(PREAMBLE_PATH, GENERATED_DIR)?;
     let markdown_ok = markdown::build_markdown(&mut metas, GENERATED_MD_DIR, PANDOC_FILTER)?;

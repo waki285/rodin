@@ -5,6 +5,7 @@ use crate::{
 use leptos::prelude::*;
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
+use crate::asset::asset_url;
 
 #[cfg(not(debug_assertions))]
 use minify_html::{minify, Cfg as HtmlMinCfg};
@@ -33,6 +34,10 @@ pub(crate) struct HtmlOptions {
 
 pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions) -> String {
     let meta_tags = opts.meta.as_ref().map(render_meta_tags).unwrap_or_default();
+    let critical = asset_url("/assets/build/critical.css");
+    let font_preload = asset_url("/assets/build/IBMPlexSansJP-Regular.subset.woff2");
+    let lazy_css = asset_url("/assets/build/lazy.css");
+    let app_js = asset_url("/assets/build/app.js");
     let structured_json = opts
         .structured_data
         .as_ref()
@@ -63,8 +68,8 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <link rel="preload" href="/assets/build/critical.css" as="style" />
-  <link rel="preload" href="/assets/build/IBMPlexSansJP-Regular.subset.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="{critical}" as="style" />
+    <link rel="preload" href="{font_preload}" as="font" type="font/woff2" crossorigin />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title}</title>
   {meta_tags}
@@ -79,8 +84,8 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="icon" href="/android-chrome-192x192.png" sizes="192x192" />
   <link rel="icon" href="/android-chrome-512x512.png" sizes="512x512" />
-  <link rel="stylesheet" href="/assets/build/critical.css" />
-  <link rel="stylesheet" href="/assets/build/lazy.css" data-unblock-css="1" media="print" />
+    <link rel="stylesheet" href="{critical}" />
+    <link rel="stylesheet" href="{lazy_css}" data-unblock-css="1" media="print" />
   {head_links}
   <script nonce="{CSP_NONCE_TOKEN}">
     const links=[...document.querySelectorAll('link[data-unblock-css=\"1\"]')];
@@ -90,7 +95,7 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
       requestAnimationFrame(()=>{{if(l.sheet) enable();}});
     }});
   </script>
-  <script type="module" src="/assets/build/app.js" nonce="{CSP_NONCE_TOKEN}" defer></script>
+    <script type="module" src="{app_js}" nonce="{CSP_NONCE_TOKEN}" defer></script>
   {head_scripts}
 </head>
 <body>
@@ -111,9 +116,9 @@ pub(crate) fn prerender_top_page(home_html: &str) -> String {
         structured_data: Some(vec![site_structured, homepage_structured]),
         head_links: vec![
             // CSS for post cards on top page
-            r#"<link rel="stylesheet" href="/assets/build/post-card.css" data-unblock-css="1" media="print" />"#.to_string(),
+            format!(r#"<link rel="stylesheet" href="{href}" data-unblock-css="1" media="print" />"#, href=asset_url("/assets/build/post-card.css")),
             // prose-base.css for below-fold content (lazy loaded, minimal styles for top page)
-            r#"<link rel="stylesheet" href="/assets/build/prose-base.css" data-unblock-css="1" media="print" />"#.to_string(),
+            format!(r#"<link rel="stylesheet" href="{href}" data-unblock-css="1" media="print" />"#, href=asset_url("/assets/build/prose-base.css")),
             // Preload low-res hero candidates by viewport width
             r#"<link rel="preload" as="image" type="image/avif" href="/assets/images/urumashi/urumashi-1280-low.avif" media="(max-width: 640px)" />"#.to_string(),
             r#"<link rel="preload" as="image" type="image/avif" href="/assets/images/urumashi/urumashi-1920-low.avif" media="(min-width: 641px) and (max-width: 1024px)" />"#.to_string(),
@@ -171,8 +176,8 @@ pub(crate) fn prerender_blog_page(meta: &FrontMatter, html_content: &str) -> Str
             Some(structured_vec)
         },
         head_links: vec![
-            r#"<link rel="stylesheet" href="/assets/build/prose-base.css" />"#.to_string(),
-            r#"<link rel="stylesheet" href="/assets/build/prose-full.css" />"#.to_string(),
+            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/prose-base.css")),
+            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/prose-full.css")),
         ],
         ..Default::default()
     };
@@ -221,8 +226,8 @@ pub(crate) fn prerender_profile_page(meta: &FrontMatter, profile_html: &str) -> 
         meta: Some(meta_map),
         structured_data: Some(structured),
         head_links: vec![
-            r#"<link rel="stylesheet" href="/assets/build/prose-base.css" />"#.to_string(),
-            r#"<link rel="stylesheet" href="/assets/build/prose-full.css" />"#.to_string(),
+            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/prose-base.css")),
+            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/prose-full.css")),
         ],
         ..Default::default()
     };
@@ -282,8 +287,8 @@ pub(crate) fn prerender_static_page(
         meta: Some(meta_map),
         structured_data: Some(structured),
         head_links: vec![
-            r#"<link rel="stylesheet" href="/assets/build/prose-base.css" />"#.to_string(),
-            r#"<link rel="stylesheet" href="/assets/build/prose-full.css" />"#.to_string(),
+            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/prose-base.css")),
+            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/prose-full.css")),
         ],
         ..Default::default()
     };
@@ -317,7 +322,7 @@ pub(crate) fn render_search_page(
     let opts = HtmlOptions {
         meta: Some(meta),
         head_links: vec![
-            r#"<link rel="stylesheet" href="/assets/build/search.css" />"#.to_string(),
+            format!(r#"<link rel="stylesheet" href="{href}" />"#, href=asset_url("/assets/build/search.css")),
         ],
         ..Default::default()
     };
