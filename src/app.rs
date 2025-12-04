@@ -179,13 +179,12 @@ async fn cache_headers_middleware(
                 }
             }
         }
-        // Cache-Control based on asset type
         let cc = if is_hashed_asset {
             // Hashed assets: immutable, 1 year
             "public, max-age=31536000, immutable"
         } else if is_image {
-            // Images without hash: medium cache (1 week) with revalidation
-            "public, max-age=604800, stale-while-revalidate=86400"
+            // Images without hash: medium cache (1 day) with revalidation
+            "public, max-age=86400, stale-while-revalidate=604800"
         } else {
             // Other assets: short cache with revalidation
             "public, max-age=300, stale-while-revalidate=604800"
@@ -245,7 +244,7 @@ fn guess_mime(ext: &str) -> Option<&'static str> {
         "woff" => Some("font/woff"),
         "woff2" => Some("font/woff2"),
         "md" => Some("text/markdown; charset=utf-8"),
-        "typ" => Some("text/plain; charset=utf-8"),
+        "typ" => Some("text/vnd.typst; charset=utf-8"),
         "txt" => Some("text/plain; charset=utf-8"),
         "pub" => Some("text/plain; charset=utf-8"),
         "asc" => Some("application/pgp-keys"),
