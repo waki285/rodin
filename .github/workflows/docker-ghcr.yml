@@ -38,8 +38,8 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/rodin:latest
             ghcr.io/${{ github.repository_owner }}/rodin:${{ github.sha }}
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/rodin:buildcache
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/rodin-buildcache:latest
             type=gha,scope=sccache
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/rodin:buildcache,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/rodin-buildcache:latest,mode=max
             type=gha,scope=sccache,mode=max
