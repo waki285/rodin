@@ -1,5 +1,13 @@
 (() => {
   // ============================================
+  // Trusted Types Policy for innerHTML
+  // ============================================
+  const trustedPolicy = window.trustedTypes?.createPolicy("rodin-spa", {
+    createHTML: (html) => html,
+  });
+  const safeHTML = (html) => trustedPolicy ? trustedPolicy.createHTML(html) : html;
+
+  // ============================================
   // Client-side Router (Next.js/Qwik style)
   // ============================================
   const Router = (() => {
@@ -103,7 +111,7 @@
       document.title = entry.title;
 
       // Swap body content
-      document.body.innerHTML = entry.html;
+      document.body.innerHTML = safeHTML(entry.html);
 
       // Re-run initialization scripts
       reinitialize();
