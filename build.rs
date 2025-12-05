@@ -16,7 +16,7 @@ mod sitemap;
 const PREAMBLE_PATH: &str = "static/preamble.typ";
 const GENERATED_DIR: &str = "static/generated";
 const GENERATED_MD_DIR: &str = "static/generated/md";
-const PANDOC_FILTER: &str = "scripts/pandoc/noimg.lua";
+const PANDOC_FILTER: &str = "scripts/pandoc/html-to-md.lua";
 const MARKDOWN_ENV_KEY: &str = "RODIN_MARKDOWN_ENABLED";
 const SITE_URL: &str = "https://suzuneu.com";
 const SITEMAP_PATH: &str = "static/generated/sitemap.xml";

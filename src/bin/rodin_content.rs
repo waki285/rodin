@@ -15,7 +15,7 @@ mod sitemap;
 const PREAMBLE_PATH: &str = "static/preamble.typ";
 const GENERATED_DIR: &str = "static/generated";
 const GENERATED_MD_DIR: &str = "static/generated/md";
-const PANDOC_FILTER: &str = "scripts/pandoc/noimg.lua";
+const PANDOC_FILTER: &str = "scripts/pandoc/html-to-md.lua";
 const DEFAULT_SITE_URL: &str = "https://suzuneu.com";
 const DEFAULT_SITEMAP_PATH: &str = "static/generated/sitemap.xml";
 const DEFAULT_RELOAD_URL: &str = "http://127.0.0.1:3000/__admin/reload";
