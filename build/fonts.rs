@@ -25,6 +25,10 @@ const TEXT_SOURCES: &[&str] = &[
     "static/preamble.typ",      // preamble for typst
 ];
 
+/// Additional characters to include in Bold font subset (beyond H1 headings)
+/// These are characters used with font-weight: 700 in critical UI elements
+const BOLD_EXTRA_CHARS: &str = "すずねーう自称プログラマープロフィール検索結果件見つかりました";
+
 pub fn subset_regular_font() -> Result<()> {
     println!("cargo:rerun-if-changed={REGULAR_FONT_SRC}");
     println!("cargo:rerun-if-changed={BOLD_FONT_SRC}");
@@ -40,6 +44,9 @@ pub fn subset_regular_font() -> Result<()> {
         return Ok(());
     }
 
+    // Collect minimal glyphs for Bold font (H1 headings + extra chars)
+    let bold_glyphs = collect_bold_glyphs()?;
+
     subset_font(
         SEMIBOLD_FONT_SRC,
         SEMIBOLD_FONT_TTF_OUT,
@@ -52,11 +59,12 @@ pub fn subset_regular_font() -> Result<()> {
         REGULAR_FONT_WOFF2_OUT,
         &glyphs,
     )?;
+    // Bold font uses minimal subset (H1 headings only + extra chars)
     subset_font(
         BOLD_FONT_SRC,
         BOLD_FONT_TTF_OUT,
         BOLD_FONT_WOFF2_OUT,
-        &glyphs,
+        &bold_glyphs,
     )?;
     Ok(())
 }
@@ -73,6 +81,67 @@ fn collect_glyphs() -> Result<BTreeSet<char>> {
     set.insert('\u{00A0}'); // non-breaking space
 
     Ok(set)
+}
+
+/// Collect minimal glyphs for Bold font:
+/// - Characters from `= ` lines (H1 headings) in .typ files
+/// - Extra characters defined in BOLD_EXTRA_CHARS
+fn collect_bold_glyphs() -> Result<BTreeSet<char>> {
+    let mut set = BTreeSet::new();
+
+    // Add extra characters for Bold font
+    for ch in BOLD_EXTRA_CHARS.chars() {
+        set.insert(ch);
+    }
+
+    // Collect H1 headings from .typ files
+    collect_h1_headings_from_dir("content", &mut set)?;
+
+    // Add basic punctuation and spaces
+    set.insert(' ');
+    set.insert('\u{00A0}'); // non-breaking space
+
+    Ok(set)
+}
+
+/// Extract characters from `= ` lines (H1 headings) in Typst files
+fn collect_h1_headings_from_dir(dir: &str, set: &mut BTreeSet<char>) -> Result<()> {
+    for entry in fs::read_dir(dir).with_context(|| format!("reading directory {dir}"))? {
+        let entry = entry?;
+        let path = entry.path();
+        if entry.file_type()?.is_file() && path.extension().is_some_and(|ext| ext == "typ") {
+            collect_h1_headings_from_file(&path, set)?;
+        }
+    }
+    Ok(())
+}
+
+/// Extract characters from lines starting with `= ` (H1 heading in Typst)
+fn collect_h1_headings_from_file(path: impl AsRef<Path>, set: &mut BTreeSet<char>) -> Result<()> {
+    let path_ref = path.as_ref();
+    let content = fs::read_to_string(path_ref)
+        .with_context(|| format!("failed to read {}", path_ref.display()))?;
+
+    for line in content.lines() {
+        let trimmed = line.trim_start();
+        // Match `= ` at the start of line (H1 heading in Typst)
+        if let Some(heading) = trimmed.strip_prefix("= ") {
+            for ch in heading.chars() {
+                if !ch.is_control() {
+                    set.insert(ch);
+                }
+            }
+        }
+        // Match `//: title: ` frontmatter (article title displayed as H1)
+        if let Some(title) = trimmed.strip_prefix("//: title:") {
+            for ch in title.trim().chars() {
+                if !ch.is_control() {
+                    set.insert(ch);
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn collect_from_content_dir(dir: &str, set: &mut BTreeSet<char>) -> Result<()> {

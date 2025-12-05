@@ -35,7 +35,8 @@ pub(crate) struct HtmlOptions {
 pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions) -> String {
     let meta_tags = opts.meta.as_ref().map(render_meta_tags).unwrap_or_default();
     let critical = asset_url("/assets/build/critical.css");
-    let font_preload = asset_url("/assets/build/IBMPlexSansJP-Regular.subset.woff2");
+    let font_preload_regular = asset_url("/assets/build/IBMPlexSansJP-Regular.subset.woff2");
+    let font_preload_bold = asset_url("/assets/build/IBMPlexSansJP-Bold.subset.woff2");
     let lazy_css = asset_url("/assets/build/lazy.css");
     let app_js = asset_url("/assets/build/app.js");
     let structured_json = opts
@@ -68,7 +69,8 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <link rel="preload" href="{font_preload}" as="font" type="font/woff2" />
+  <link rel="preload" href="{font_preload_bold}" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="{font_preload_regular}" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="{critical}" as="style" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title}</title>
