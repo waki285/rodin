@@ -41,11 +41,13 @@
       const doc = parser.parseFromString(html, "text/html");
       const title = doc.title || "すずねーう";
       const bodyHtml = doc.body.innerHTML;
-      const headLinks = Array.from(doc.querySelectorAll('link[rel="stylesheet"]'))
-        .map((l) => l.outerHTML)
-        .join("");
+      
+      // Extract stylesheet links from the new page
+      const stylesheets = Array.from(doc.querySelectorAll('link[rel="stylesheet"]'))
+        .map((l) => l.getAttribute("href"))
+        .filter(Boolean);
 
-      const entry = { html: bodyHtml, title, headLinks, timestamp: Date.now() };
+      const entry = { html: bodyHtml, title, stylesheets, timestamp: Date.now() };
       cache.set(url, entry);
       return entry;
     };
@@ -63,8 +65,40 @@
       }
     };
 
+    // Ensure all required stylesheets are loaded
+    const ensureStylesheets = (stylesheets) => {
+      const currentHrefs = new Set(
+        Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+          .map((l) => l.getAttribute("href"))
+          .filter(Boolean)
+      );
+
+      const promises = [];
+      for (const href of stylesheets) {
+        if (!currentHrefs.has(href)) {
+          // Add missing stylesheet
+          const link = document.createElement("link");
+          link.rel = "stylesheet";
+          link.href = href;
+          
+          // Wait for it to load
+          const loadPromise = new Promise((resolve) => {
+            link.onload = resolve;
+            link.onerror = resolve; // Don't block on error
+          });
+          promises.push(loadPromise);
+          
+          document.head.appendChild(link);
+        }
+      }
+      return Promise.all(promises);
+    };
+
     // Update DOM with new page content
-    const updateDOM = (entry, url) => {
+    const updateDOM = async (entry, url) => {
+      // Ensure all stylesheets are loaded first
+      await ensureStylesheets(entry.stylesheets);
+
       // Update title
       document.title = entry.title;
 
@@ -98,11 +132,11 @@
 
         // Use View Transitions API if available
         if (document.startViewTransition) {
-          await document.startViewTransition(() => {
-            updateDOM(entry, url);
+          await document.startViewTransition(async () => {
+            await updateDOM(entry, url);
           }).finished;
         } else {
-          updateDOM(entry, url);
+          await updateDOM(entry, url);
         }
 
         if (pushState) {
