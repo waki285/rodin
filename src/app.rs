@@ -24,6 +24,7 @@ use crate::logging;
 const RODIN_MARKDOWN_ENABLED: &str = env!("RODIN_MARKDOWN_ENABLED");
 const GIT_HASH: &str = env!("GIT_HASH");
 
+#[inline]
 pub(crate) fn markdown_enabled() -> bool {
     matches!(
         RODIN_MARKDOWN_ENABLED,
@@ -31,6 +32,17 @@ pub(crate) fn markdown_enabled() -> bool {
     )
 }
 
+const AI_CRAWLER_PATTERNS: &[&str] = &[
+    "https://openai.com",
+    "Google-Extended",
+    "https://perplexity.ai",
+    "Claude",
+    "CCBot",
+    "AMZN-User",
+    "Amazonbot",
+];
+
+#[inline]
 fn env_flag(key: &str, default: bool) -> bool {
     env::var(key)
         .map(|v| {
@@ -121,6 +133,17 @@ async fn cache_headers_middleware(
     let path_owned = req.uri().path().to_string();
     let ext_owned = path_owned.rsplit('.').next().map(str::to_string);
     let ext = ext_owned.as_deref();
+
+    // AIクローラー判定（.typ / .md で text/plain を返すため）
+    let is_ai_crawler = is_ai_crawler_ua(
+        req.headers()
+            .get(axum::http::header::USER_AGENT)
+            .and_then(|v| v.to_str().ok()),
+    );
+    let is_source_file = ext
+        .map(|e| e.eq_ignore_ascii_case("typ") || e.eq_ignore_ascii_case("md"))
+        .unwrap_or(false);
+
     let mut res = next.run(req).await;
 
     let is_asset = path_owned.starts_with("/assets/")
@@ -165,7 +188,13 @@ async fn cache_headers_middleware(
             .unwrap_or(true);
         if need_ct {
             if let Some(ext) = ext {
-                if let Some(mime) = guess_mime(ext) {
+                // AIクローラーで .typ / .md の場合は text/plain を返す
+                let mime = if is_ai_crawler && is_source_file {
+                    Some("text/plain; charset=utf-8")
+                } else {
+                    guess_mime(ext)
+                };
+                if let Some(mime) = mime {
                     if let Ok(val) = HeaderValue::from_str(mime) {
                         res.headers_mut()
                             .insert(axum::http::header::CONTENT_TYPE, val);
@@ -236,6 +265,14 @@ fn is_hashed_filename(path: &str) -> bool {
     false
 }
 
+/// AIクローラーのUser-Agentかどうかを判定
+#[inline]
+fn is_ai_crawler_ua(ua: Option<&str>) -> bool {
+    let Some(ua) = ua else { return false };
+    AI_CRAWLER_PATTERNS.iter().any(|p| ua.contains(p))
+}
+
+#[inline]
 fn guess_mime(ext: &str) -> Option<&'static str> {
     match ext.to_ascii_lowercase().as_str() {
         "html" | "htm" => Some("text/html; charset=utf-8"),

@@ -39,6 +39,25 @@ pub fn get_client_ip(headers: &HeaderMap, socket_addr: &SocketAddr) -> String {
     client_ip_from_headers(headers).unwrap_or_else(|| socket_addr.ip().to_string())
 }
 
+/// AIクローラーのUser-Agentかどうかを判定
+const AI_CRAWLER_PATTERNS: &[&str] = &[
+    "https://openai.com",
+    "Google-Extended",
+    "https://perplexity.ai",
+    "Claude",
+    "CCBot",
+    "AMZN-User",
+    "Amazonbot",
+];
+
+fn is_ai_crawler(headers: &HeaderMap) -> bool {
+    headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(|ua| AI_CRAWLER_PATTERNS.iter().any(|p| ua.contains(p)))
+        .unwrap_or(false)
+}
+
 pub async fn reload_handler(
     State(state): State<SharedAppState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -109,15 +128,15 @@ pub async fn blog_handler(
 
     // curl が /blog/{slug}.typ か /blog/{slug} にリクエストしたら Typst ソースを返す
     if let Some(stripped) = slug_clean.strip_suffix(".typ") {
-        return raw_typ_response(&state, stripped).await;
+        return raw_typ_response(&state, stripped, &headers).await;
     }
     if is_curl && !slug.contains('.') {
-        return raw_typ_response(&state, &slug_clean).await;
+        return raw_typ_response(&state, &slug_clean, &headers).await;
     }
 
     // /blog/{slug}.md にリクエストしたら Markdown ソースを返す
     if let Some(stripped) = slug_clean.strip_suffix(".md") {
-        return markdown_response(&state, stripped).await;
+        return markdown_response(&state, stripped, &headers).await;
     }
 
     let prerendered = match state.blog_pages.get(&slug_clean) {
@@ -256,25 +275,30 @@ pub async fn pgp_handler(
     Html(html).into_response()
 }
 
-pub async fn raw_typ_response(state: &AppState, slug: &str) -> Response {
+pub async fn raw_typ_response(state: &AppState, slug: &str, headers: &HeaderMap) -> Response {
     // 悪意駆動型人生を送っている人を防ぐ
     if slug.contains('/') || slug.starts_with('_') {
         return not_found_response().await;
     }
     match state.blog_typs.get(slug) {
-        Some(src) => (
-            [(
-                axum::http::header::CONTENT_TYPE,
-                "text/vnd.typst; charset=utf-8",
-            )],
-            src.as_ref().to_string(),
-        )
-            .into_response(),
+        Some(src) => {
+            // AIクローラーの場合は text/plain を返す
+            let content_type = if is_ai_crawler(headers) {
+                "text/plain; charset=utf-8"
+            } else {
+                "text/vnd.typst; charset=utf-8"
+            };
+            (
+                [(axum::http::header::CONTENT_TYPE, content_type)],
+                src.as_ref().to_string(),
+            )
+                .into_response()
+        }
         None => not_found_response().await,
     }
 }
 
-pub async fn markdown_response(state: &AppState, slug: &str) -> Response {
+pub async fn markdown_response(state: &AppState, slug: &str, headers: &HeaderMap) -> Response {
     if !markdown_enabled() {
         return (
             [(
@@ -292,14 +316,19 @@ pub async fn markdown_response(state: &AppState, slug: &str) -> Response {
         return not_found_response().await;
     }
     match state.blog_markdowns.get(slug) {
-        Some(md) => (
-            [(
-                axum::http::header::CONTENT_TYPE,
-                "text/markdown; charset=utf-8",
-            )],
-            md.as_ref().to_string(),
-        )
-            .into_response(),
+        Some(md) => {
+            // AIクローラーの場合は text/plain を返す
+            let content_type = if is_ai_crawler(headers) {
+                "text/plain; charset=utf-8"
+            } else {
+                "text/markdown; charset=utf-8"
+            };
+            (
+                [(axum::http::header::CONTENT_TYPE, content_type)],
+                md.as_ref().to_string(),
+            )
+                .into_response()
+        }
         None => not_found_response().await,
     }
 }
