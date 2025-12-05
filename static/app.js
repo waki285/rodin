@@ -46,7 +46,8 @@
 
       const html = await response.text();
       const parser = new DOMParser();
-      const doc = parser.parseFromString(html, "text/html");
+      // DOMParser also requires TrustedHTML in strict CSP environments
+      const doc = parser.parseFromString(safeHTML(html), "text/html");
       const title = doc.title || "すずねーう";
       const bodyHtml = doc.body.innerHTML;
       
