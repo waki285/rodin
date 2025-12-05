@@ -63,6 +63,7 @@ pub fn BlogPage(
                     published=meta.published_at.clone()
                     updated=meta.updated_at.clone()
                     reading_minutes=meta.reading_minutes
+                    slug=current_path.strip_prefix("/blog/").unwrap_or(&current_path).to_string()
                 />
                 <ShowTags tags=meta.tags.clone() />
                 <article inner_html=html_content></article>
@@ -353,6 +354,7 @@ fn MetaRow(
     published: Option<String>,
     updated: Option<String>,
     reading_minutes: Option<u32>,
+    #[prop(optional)] slug: Option<String>,
 ) -> impl IntoView {
     let pub_text = published.unwrap_or_else(|| "N/A".to_string());
     let upd_text = updated.unwrap_or_else(|| pub_text.clone());
@@ -370,6 +372,18 @@ fn MetaRow(
                 <time datetime={upd_dt}>{upd_text}</time>
             </span>
             {read_label.map(|txt| view! { <span>{txt}</span> })}
+            {slug.map(|s| {
+                let typ_url = format!("/blog/{s}.typ");
+                let md_url = format!("/blog/{s}.md");
+                view! {
+                    <span class="llm-sources">
+                        "Sources for LLMs: "
+                        <a href=typ_url rel="nofollow">"Typst"</a>
+                        " | "
+                        <a href=md_url rel="nofollow">"Markdown"</a>
+                    </span>
+                }
+            })}
         </div>
     }
 }

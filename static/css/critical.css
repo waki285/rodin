@@ -896,6 +896,18 @@
     margin-bottom: 0.25rem;
   }
 
+  .llm-sources a {
+    color: var(--color-blue-600);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    &:hover {
+      text-decoration: none;
+    }
+    &:where(.dark, .dark *) {
+      color: var(--color-blue-400);
+    }
+  }
+
   .blog-tags {
     margin-bottom: 1rem;
     display: flex;

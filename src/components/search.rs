@@ -36,7 +36,7 @@ pub fn SearchPage(
                     </form>
                 </div>
 
-                <div class="space-y-4">
+                <div>
                     {if query.is_empty() {
                         view! { <p class="search-error">"検索キーワードを入力してください"</p> }.into_any()
                     } else if results.is_empty() {

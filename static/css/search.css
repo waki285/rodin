@@ -69,9 +69,11 @@
       }
     }
     & > div:last-child {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+      ul {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
       li {
         border: 1px solid var(--color-slate-200);
         border-radius: var(--radius-lg);
