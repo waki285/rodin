@@ -27,7 +27,7 @@ const TEXT_SOURCES: &[&str] = &[
 
 /// Additional characters to include in Bold font subset (beyond H1 headings)
 /// These are characters used with font-weight: 700 in critical UI elements
-const BOLD_EXTRA_CHARS: &str = "すずねーう自称プログラマープロフィール検索結果件見つかりました";
+const BOLD_EXTRA_CHARS: &str = "すずねーう目次プロフィール検索結果件見つかりました";
 
 pub fn subset_regular_font() -> Result<()> {
     println!("cargo:rerun-if-changed={REGULAR_FONT_SRC}");
@@ -79,6 +79,11 @@ fn collect_glyphs() -> Result<BTreeSet<char>> {
 
     set.insert(' ');
     set.insert('\u{00A0}'); // non-breaking space
+
+    // Additional characters not in source files
+    for ch in "技術".chars() {
+        set.insert(ch);
+    }
 
     Ok(set)
 }
