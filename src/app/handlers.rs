@@ -21,7 +21,7 @@ use crate::app::render::{render_search_page, SearchHit};
 const CSP_PREFIX: &str = "default-src 'self'; script-src 'self' 'nonce-";
 const CSP_SUFFIX: &str = "' static.cloudflareinsights.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; trusted-types rodin-spa; require-trusted-types-for 'script'";
 
-static TRUST_PROXY_ENABLED: LazyLock<bool> = LazyLock::new(|| {
+pub(crate) static TRUST_PROXY_ENABLED: LazyLock<bool> = LazyLock::new(|| {
     env::var("TRUST_PROXY")
         .map(|v| v == "true")
         .unwrap_or(false)
@@ -32,6 +32,11 @@ fn reload_token() -> Option<&'static str> {
     RELOAD_TOKEN
         .get_or_init(|| env::var("RELOAD_TOKEN").ok())
         .as_deref()
+}
+
+/// Extract client IP from headers (with proxy support) or fallback to socket address
+pub fn get_client_ip(headers: &HeaderMap, socket_addr: &SocketAddr) -> String {
+    client_ip_from_headers(headers).unwrap_or_else(|| socket_addr.ip().to_string())
 }
 
 pub async fn reload_handler(

@@ -2,6 +2,9 @@ mod handlers;
 pub mod render;
 mod state;
 
+// Re-export for use in logging
+pub use handlers::get_client_ip;
+
 use axum::http::HeaderValue;
 use std::{convert::Infallible, env, sync::OnceLock};
 
@@ -15,6 +18,8 @@ use tokio::net::TcpListener;
 use tower::service_fn;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
+
+use crate::logging;
 
 const RODIN_MARKDOWN_ENABLED: &str = env!("RODIN_MARKDOWN_ENABLED");
 const GIT_HASH: &str = env!("GIT_HASH");
@@ -67,6 +72,7 @@ pub async fn run() -> anyhow::Result<()> {
     }
     app = app.layer(middleware::from_fn(handlers::security_middleware));
     app = app.layer(middleware::from_fn(cache_headers_middleware));
+    app = app.layer(middleware::from_fn(logging::access_log_middleware));
 
     let bind = env::var("BIND_ADDRESS").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = env::var("PORT")
@@ -74,7 +80,7 @@ pub async fn run() -> anyhow::Result<()> {
         .and_then(|p| p.parse().ok())
         .unwrap_or(3000);
     let listener = TcpListener::bind(format!("{}:{}", bind, port)).await?;
-    println!("Server running on http://{}:{}", bind, port);
+    tracing::info!("Server running on http://{}:{}", bind, port);
 
     axum::serve(
         listener,
