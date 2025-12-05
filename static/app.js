@@ -121,9 +121,11 @@
     };
 
     // Navigate to a new URL
+    // pushState: true = normal navigation, false = popstate (back/forward)
     const navigate = async (url, pushState = true) => {
       if (isNavigating) return;
-      if (url === location.href) return;
+      // Only skip duplicate for normal navigation, not for popstate
+      if (pushState && url === location.href) return;
 
       isNavigating = true;
 
