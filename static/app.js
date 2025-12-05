@@ -1,35 +1,271 @@
 (() => {
-  const sticky = document.getElementById("fixed-header");
-  const primary = document.getElementById("primary-header");
-  if (sticky && primary) {
-    sticky.classList.remove("hidden");
-    const update = (active) => {
-      sticky.classList.toggle("active", active);
+  // ============================================
+  // Client-side Router (Next.js/Qwik style)
+  // ============================================
+  const Router = (() => {
+    const cache = new Map(); // URL -> { html, title, timestamp }
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+    const prefetching = new Set();
+    let isNavigating = false;
+
+    // Check if URL is internal and should be handled by router
+    const isInternalLink = (url) => {
+      try {
+        const parsed = new URL(url, location.origin);
+        if (parsed.origin !== location.origin) return false;
+        if (parsed.pathname.match(/\.(pdf|zip|tar|gz|xml|txt|typ|md|json)$/i)) return false;
+        if (parsed.pathname.startsWith("/assets/")) return false;
+        if (parsed.pathname.startsWith("/__admin")) return false;
+        return true;
+      } catch {
+        return false;
+      }
     };
 
-    if ("IntersectionObserver" in window) {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            update(!entry.isIntersecting);
-          });
-        },
-        { rootMargin: "0px", threshold: 0 }
-      );
-      observer.observe(primary);
-    } else {
-      const threshold = primary.offsetHeight;
-      const onScroll = () => update(window.scrollY > threshold);
-      window.addEventListener("scroll", onScroll, { passive: true });
-      onScroll();
-    }
-  }
+    // Fetch and parse HTML
+    const fetchPage = async (url) => {
+      const cached = cache.get(url);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached;
+      }
 
+      const response = await fetch(url, {
+        headers: { "X-Rodin-SPA": "1" },
+        credentials: "same-origin",
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const html = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      const title = doc.title || "すずねーう";
+      const bodyHtml = doc.body.innerHTML;
+      const headLinks = Array.from(doc.querySelectorAll('link[rel="stylesheet"]'))
+        .map((l) => l.outerHTML)
+        .join("");
+
+      const entry = { html: bodyHtml, title, headLinks, timestamp: Date.now() };
+      cache.set(url, entry);
+      return entry;
+    };
+
+    // Prefetch a URL (low priority)
+    const prefetch = async (url) => {
+      if (cache.has(url) || prefetching.has(url)) return;
+      prefetching.add(url);
+      try {
+        await fetchPage(url);
+      } catch {
+        // Ignore prefetch errors
+      } finally {
+        prefetching.delete(url);
+      }
+    };
+
+    // Update DOM with new page content
+    const updateDOM = (entry, url) => {
+      // Update title
+      document.title = entry.title;
+
+      // Swap body content
+      document.body.innerHTML = entry.html;
+
+      // Re-run initialization scripts
+      reinitialize();
+
+      // Scroll to top (or hash)
+      const hash = new URL(url, location.origin).hash;
+      if (hash) {
+        const target = document.querySelector(hash);
+        if (target) {
+          target.scrollIntoView({ behavior: "instant" });
+          return;
+        }
+      }
+      window.scrollTo(0, 0);
+    };
+
+    // Navigate to a new URL
+    const navigate = async (url, pushState = true) => {
+      if (isNavigating) return;
+      if (url === location.href) return;
+
+      isNavigating = true;
+
+      try {
+        const entry = await fetchPage(url);
+
+        // Use View Transitions API if available
+        if (document.startViewTransition) {
+          await document.startViewTransition(() => {
+            updateDOM(entry, url);
+          }).finished;
+        } else {
+          updateDOM(entry, url);
+        }
+
+        if (pushState) {
+          history.pushState({ url }, "", url);
+        }
+      } catch (err) {
+        // Fallback to normal navigation on error
+        location.href = url;
+      } finally {
+        isNavigating = false;
+      }
+    };
+
+    // Handle click events on links
+    const handleClick = (e) => {
+      // Ignore if modifier keys pressed
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (e.button !== 0) return; // Left click only
+
+      const link = e.target.closest("a");
+      if (!link) return;
+
+      const href = link.getAttribute("href");
+      if (!href) return;
+
+      const url = new URL(href, location.origin).href;
+      if (!isInternalLink(url)) return;
+
+      // Check for download or target="_blank"
+      if (link.hasAttribute("download")) return;
+      if (link.target === "_blank") return;
+
+      e.preventDefault();
+      navigate(url);
+    };
+
+    // Handle popstate (back/forward)
+    const handlePopState = (e) => {
+      const url = e.state?.url || location.href;
+      navigate(url, false);
+    };
+
+    // Prefetch on hover/focus
+    const handleHover = (e) => {
+      const link = e.target.closest("a");
+      if (!link) return;
+
+      const href = link.getAttribute("href");
+      if (!href) return;
+
+      const url = new URL(href, location.origin).href;
+      if (!isInternalLink(url)) return;
+
+      prefetch(url);
+    };
+
+    // Initialize router
+    const init = () => {
+      // Store initial state
+      history.replaceState({ url: location.href }, "", location.href);
+
+      // Event listeners
+      document.addEventListener("click", handleClick);
+      window.addEventListener("popstate", handlePopState);
+
+      // Prefetch on hover (with debounce)
+      let hoverTimeout;
+      document.addEventListener("mouseover", (e) => {
+        clearTimeout(hoverTimeout);
+        hoverTimeout = setTimeout(() => handleHover(e), 50);
+      });
+      document.addEventListener("focusin", handleHover);
+
+      // Prefetch visible links in viewport after idle
+      if ("IntersectionObserver" in window) {
+        const prefetchObserver = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                const href = entry.target.getAttribute("href");
+                if (href) {
+                  const url = new URL(href, location.origin).href;
+                  if (isInternalLink(url)) {
+                    prefetch(url);
+                  }
+                }
+                prefetchObserver.unobserve(entry.target);
+              }
+            });
+          },
+          { rootMargin: "50px" }
+        );
+
+        const observeLinks = () => {
+          document.querySelectorAll("a[data-prefetch='true']").forEach((link) => {
+            prefetchObserver.observe(link);
+          });
+        };
+
+        if ("requestIdleCallback" in window) {
+          requestIdleCallback(observeLinks, { timeout: 3000 });
+        } else {
+          setTimeout(observeLinks, 2000);
+        }
+      }
+    };
+
+    return { init, prefetch, navigate };
+  })();
+
+  // ============================================
+  // Reinitialize scripts after SPA navigation
+  // ============================================
+  const reinitialize = () => {
+    initStickyHeader();
+    initThemeToggle();
+    initShowIp();
+    initNavMenus();
+    initCopyButtons();
+    initHomeScript();
+  };
+
+  // ============================================
+  // Sticky Header
+  // ============================================
+  const initStickyHeader = () => {
+    const sticky = document.getElementById("fixed-header");
+    const primary = document.getElementById("primary-header");
+    if (sticky && primary) {
+      sticky.classList.remove("hidden");
+      const update = (active) => {
+        sticky.classList.toggle("active", active);
+      };
+
+      if ("IntersectionObserver" in window) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              update(!entry.isIntersecting);
+            });
+          },
+          { rootMargin: "0px", threshold: 0 }
+        );
+        observer.observe(primary);
+      } else {
+        const threshold = primary.offsetHeight;
+        const onScroll = () => update(window.scrollY > threshold);
+        window.addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
+      }
+    }
+  };
+
+  // ============================================
+  // Theme Toggle
+  // ============================================
   const THEME_KEY = "rodin-theme";
+  
   const toggles = () =>
     Array.from(document.querySelectorAll(".theme-toggle")).filter(
       (btn) => btn instanceof HTMLElement
     );
+
   const applyTheme = (theme) => {
     document.documentElement.classList.toggle("dark", theme === "dark");
     toggles().forEach((btn) => {
@@ -37,83 +273,81 @@
       btn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
     });
   };
-  const stored = localStorage.getItem(THEME_KEY);
-  const preferred =
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  const initial = stored || preferred;
-  applyTheme(initial);
-  localStorage.setItem(THEME_KEY, initial);
-  toggles().forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const current = document.documentElement.classList.contains("dark")
+
+  const initThemeToggle = () => {
+    const stored = localStorage.getItem(THEME_KEY);
+    const preferred =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
-      const next = current === "dark" ? "light" : "dark";
-      applyTheme(next);
-      localStorage.setItem(THEME_KEY, next);
+    const initial = stored || preferred;
+    applyTheme(initial);
+    localStorage.setItem(THEME_KEY, initial);
+
+    toggles().forEach((btn) => {
+      // Remove old listeners by cloning
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      newBtn.addEventListener("click", () => {
+        const current = document.documentElement.classList.contains("dark")
+          ? "dark"
+          : "light";
+        const next = current === "dark" ? "light" : "dark";
+        applyTheme(next);
+        localStorage.setItem(THEME_KEY, next);
+      });
     });
-  });
-
-  document.querySelectorAll("[data-show-ip]").forEach((btn) => {
-    if (!(btn instanceof HTMLElement)) return;
-    btn.addEventListener("click", () => {
-      const ip = btn.getAttribute("data-show-ip");
-      if (!ip) return;
-      btn.textContent = "IP: " + ip;
-      btn.classList.remove("underline");
-    });
-  });
-
-  // Close nav menus when clicking outside or selecting a link (mobile)
-  const navToggles = [
-    document.getElementById("nav-toggle-main"),
-    document.getElementById("nav-toggle-fixed"),
-  ].filter((x) => x);
-
-  const closeMenus = () => navToggles.forEach((chk) => (chk.checked = false));
-
-  document.addEventListener("click", (e) => {
-    const target = e.target;
-    if (!(target instanceof Element)) return;
-    const menuContainers = [
-      document.getElementById("primary-header"),
-      document.getElementById("fixed-header"),
-    ].filter((x) => x);
-    const inside = menuContainers.some((c) => c && c.contains(target));
-    if (!inside) closeMenus();
-  });
-
-  document.querySelectorAll("#primary-header a, #fixed-header a").forEach((a) => {
-    a.addEventListener("click", () => closeMenus());
-  });
-
-  // Prefetch in-page links (similar to Next.js) after idle so LCP is unaffected
-  const schedulePrefetch = () => {
-    const addPrefetch = (href) => {
-      if (!href || href.startsWith("http")) return;
-      // avoid duplicate prefetch tags
-      if (document.querySelector(`link[rel="prefetch"][href="${href}"]`)) return;
-      const l = document.createElement("link");
-      l.rel = "prefetch";
-      l.as = "document";
-      l.href = href;
-      document.head.appendChild(l);
-    };
-
-    const links = document.querySelectorAll("a[data-prefetch='true']");
-    links.forEach((a) => addPrefetch(a.getAttribute("href")));
   };
 
-  if ("requestIdleCallback" in window) {
-    requestIdleCallback(schedulePrefetch, { timeout: 3000 });
-  } else {
-    setTimeout(schedulePrefetch, 2000);
-  }
+  // ============================================
+  // Show IP Button
+  // ============================================
+  const initShowIp = () => {
+    document.querySelectorAll("[data-show-ip]").forEach((btn) => {
+      if (!(btn instanceof HTMLElement)) return;
+      if (btn.dataset.ipInit) return;
+      btn.dataset.ipInit = "1";
+      btn.addEventListener("click", () => {
+        const ip = btn.getAttribute("data-show-ip");
+        if (!ip) return;
+        btn.textContent = "IP: " + ip;
+        btn.classList.remove("underline");
+      });
+    });
+  };
 
-  // Add copy buttons to code blocks
+  // ============================================
+  // Navigation Menus
+  // ============================================
+  const initNavMenus = () => {
+    const navToggles = [
+      document.getElementById("nav-toggle-main"),
+      document.getElementById("nav-toggle-fixed"),
+    ].filter((x) => x);
+
+    const closeMenus = () => navToggles.forEach((chk) => (chk.checked = false));
+
+    // Close menus on outside click
+    document.addEventListener("click", (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      const menuContainers = [
+        document.getElementById("primary-header"),
+        document.getElementById("fixed-header"),
+      ].filter((x) => x);
+      const inside = menuContainers.some((c) => c && c.contains(target));
+      if (!inside) closeMenus();
+    });
+
+    document.querySelectorAll("#primary-header a, #fixed-header a").forEach((a) => {
+      a.addEventListener("click", () => closeMenus());
+    });
+  };
+
+  // ============================================
+  // Copy Buttons for Code Blocks
+  // ============================================
   const initCopyButtons = () => {
     document.querySelectorAll("pre code").forEach((code) => {
       const pre = code.parentElement;
@@ -141,54 +375,65 @@
       pre.appendChild(btn);
     });
   };
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initCopyButtons);
-  } else {
-    initCopyButtons();
-  }
 
-  // Lazy-load home-only script after LCP to avoid blocking critical rendering.
-  if (window.location.pathname === "/") {
+  // ============================================
+  // Home-specific Script
+  // ============================================
+  const initHomeScript = () => {
+    if (window.location.pathname !== "/") return;
+
     const loadHomeJs = () => import("/assets/build/home.js").catch(() => {});
-    
-    // Wait for LCP, then load home.js
-    const scheduleAfterLCP = () => {
-      if ("PerformanceObserver" in window) {
-        let lcpFired = false;
-        const observer = new PerformanceObserver((list) => {
-          // LCP entries are reported; the last one is the actual LCP
-          const entries = list.getEntries();
-          if (entries.length > 0 && !lcpFired) {
-            lcpFired = true;
-            observer.disconnect();
-            // Small delay after LCP to ensure paint is complete
-            requestAnimationFrame(() => {
-              setTimeout(loadHomeJs, 0);
-            });
-          }
-        });
-        observer.observe({ type: "largest-contentful-paint", buffered: true });
-        
-        // Fallback: if LCP doesn't fire within 5s, load anyway
-        setTimeout(() => {
-          if (!lcpFired) {
-            lcpFired = true;
-            observer.disconnect();
-            loadHomeJs();
-          }
-        }, 5000);
-      } else {
-        // Fallback for browsers without PerformanceObserver
-        if (document.readyState === "complete") {
-          requestIdleCallback ? requestIdleCallback(loadHomeJs, { timeout: 1500 }) : setTimeout(loadHomeJs, 0);
-        } else {
-          window.addEventListener("load", () => {
-            requestIdleCallback ? requestIdleCallback(loadHomeJs, { timeout: 1500 }) : setTimeout(loadHomeJs, 0);
-          }, { once: true });
-        }
-      }
-    };
 
-    scheduleAfterLCP();
-  }
+    // Wait for LCP, then load home.js
+    if ("PerformanceObserver" in window) {
+      let lcpFired = false;
+      const observer = new PerformanceObserver((list) => {
+        const entries = list.getEntries();
+        if (entries.length > 0 && !lcpFired) {
+          lcpFired = true;
+          observer.disconnect();
+          requestAnimationFrame(() => {
+            setTimeout(loadHomeJs, 0);
+          });
+        }
+      });
+      observer.observe({ type: "largest-contentful-paint", buffered: true });
+
+      // Fallback: if LCP doesn't fire within 5s, load anyway
+      setTimeout(() => {
+        if (!lcpFired) {
+          lcpFired = true;
+          observer.disconnect();
+          loadHomeJs();
+        }
+      }, 5000);
+    } else {
+      if (document.readyState === "complete") {
+        "requestIdleCallback" in window
+          ? requestIdleCallback(loadHomeJs, { timeout: 1500 })
+          : setTimeout(loadHomeJs, 0);
+      } else {
+        window.addEventListener(
+          "load",
+          () => {
+            "requestIdleCallback" in window
+              ? requestIdleCallback(loadHomeJs, { timeout: 1500 })
+              : setTimeout(loadHomeJs, 0);
+          },
+          { once: true }
+        );
+      }
+    }
+  };
+
+  // ============================================
+  // Initialize Everything
+  // ============================================
+  Router.init();
+  initStickyHeader();
+  initThemeToggle();
+  initShowIp();
+  initNavMenus();
+  initCopyButtons();
+  initHomeScript();
 })();
