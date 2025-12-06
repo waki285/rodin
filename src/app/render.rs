@@ -42,6 +42,13 @@ pub(crate) struct HtmlOptions {
     pub head_scripts: Vec<String>,
 }
 
+/// Generate a lazy-loaded CSS link with noscript fallback
+pub(crate) fn lazy_css_link(href: &str) -> String {
+    format!(
+        r#"<link rel="stylesheet" href="{href}" data-unblock-css="1" media="print" /><noscript><link rel="stylesheet" href="{href}" /></noscript>"#
+    )
+}
+
 pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions) -> String {
     let meta_tags = opts.meta.as_ref().map(render_meta_tags).unwrap_or_default();
     let critical = asset_url("/assets/build/critical.css");
@@ -98,6 +105,7 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
   <link rel="icon" href="/android-chrome-512x512.png" sizes="512x512" />
   <link rel="stylesheet" href="{critical}" />
   <link rel="stylesheet" href="{lazy_css}" data-unblock-css="1" media="print" />
+  <noscript><link rel="stylesheet" href="{lazy_css}" /></noscript>
   {head_links}
   <script nonce="{CSP_NONCE_TOKEN}">
     const links=[...document.querySelectorAll('link[data-unblock-css=\"1\"]')];
@@ -128,9 +136,9 @@ pub(crate) fn prerender_top_page(home_html: &str) -> String {
         structured_data: Some(vec![site_structured, homepage_structured]),
         head_links: vec![
             // CSS for post cards on top page
-            format!(r#"<link rel="stylesheet" href="{href}" data-unblock-css="1" media="print" />"#, href=asset_url("/assets/build/post-card.css")),
+            lazy_css_link(&asset_url("/assets/build/post-card.css")),
             // prose-base.css for below-fold content (lazy loaded, minimal styles for top page)
-            format!(r#"<link rel="stylesheet" href="{href}" data-unblock-css="1" media="print" />"#, href=asset_url("/assets/build/prose-base.css")),
+            lazy_css_link(&asset_url("/assets/build/prose-base.css")),
             // Preload low-res hero candidates by viewport width
             r#"<link rel="preload" as="image" type="image/avif" href="/assets/images/urumashi/urumashi-1280-low.avif" media="(max-width: 640px)" />"#.to_string(),
             r#"<link rel="preload" as="image" type="image/avif" href="/assets/images/urumashi/urumashi-1920-low.avif" media="(min-width: 641px) and (max-width: 1024px)" />"#.to_string(),
