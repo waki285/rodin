@@ -16,7 +16,16 @@ fn minify_js(src_path: &PathBuf) -> Result<String> {
             "--charset=utf8",
             "--minify",
             "--legal-comments=none",
-            "--drop:console",
+            {
+                #[cfg(debug_assertions)]
+                {
+                    "--drop:debugger"
+                }
+                #[cfg(not(debug_assertions))]
+                {
+                    "--drop:console"
+                }
+            },
             "--tree-shaking=true",
             format!("--outfile={}", tmp_dst.to_string_lossy()).as_ref(),
         ])

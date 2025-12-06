@@ -19,7 +19,7 @@ use super::{
 use crate::app::render::{render_search_page, SearchHit};
 
 const CSP_PREFIX: &str = "default-src 'self'; script-src 'self' 'nonce-";
-const CSP_SUFFIX: &str = "' static.cloudflareinsights.com platform.twitter.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-src https://platform.twitter.com https://syndication.twitter.com; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; trusted-types rodin-spa rodin-twitter";
+const CSP_SUFFIX: &str = "' static.cloudflareinsights.com platform.twitter.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-src https://platform.twitter.com https://syndication.twitter.com; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; trusted-types default rodin-spa rodin-twitter; require-trusted-types-for 'script'";
 
 pub(crate) static TRUST_PROXY_ENABLED: LazyLock<bool> = LazyLock::new(|| {
     env::var("TRUST_PROXY")

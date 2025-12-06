@@ -1,11 +1,33 @@
 (() => {
   // ============================================
-  // Trusted Types Policy for innerHTML
+  // Trusted Types Policies
   // ============================================
-  const trustedPolicy = window.trustedTypes?.createPolicy("rodin-spa", {
+  const getOrCreatePolicy = (name, spec) => {
+    const tt = window.trustedTypes;
+    if (!tt) return null;
+    const existing = tt.getPolicy?.(name);
+    if (existing) return existing;
+    try {
+      return tt.createPolicy(name, spec);
+    } catch (_) {
+      return tt.getPolicy?.(name) ?? null;
+    }
+  };
+
+  // Default policy to satisfy require-trusted-types-for 'script'
+  getOrCreatePolicy("default", {
+    createHTML: () => { throw new Error("Not allowed"); },
+    createScriptURL: (url) => {
+      if (url.startsWith("https://platform.twitter.com/js/tweet.")) return url;
+      throw new Error("Not allowed");
+    },
+  });
+
+  const trustedPolicy = getOrCreatePolicy("rodin-spa", {
     createHTML: (html) => html,
   });
-  const safeHTML = (html) => trustedPolicy ? trustedPolicy.createHTML(html) : html;
+
+  const safeHTML = (html) => (trustedPolicy ? trustedPolicy.createHTML(html) : html);
 
   // ============================================
   // Client-side Router (Next.js/Qwik style)
