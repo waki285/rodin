@@ -154,6 +154,53 @@ pub struct SearchQuery {
     q: Option<String>,
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct BlogListQuery {
+    page: Option<u32>,
+}
+
+const POSTS_PER_PAGE: usize = 10;
+
+pub async fn blog_list_handler(
+    State(state): State<SharedAppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(nonce): Extension<String>,
+    Query(params): Query<BlogListQuery>,
+) -> Response {
+    let state = state.read().await;
+    let client_ip = addr.ip().to_string();
+    let page = params.page.unwrap_or(1).max(1) as usize;
+
+    // 投稿を日付でソート（新しい順）
+    let mut posts: Vec<_> = state
+        .search_index
+        .iter()
+        .map(|e| crate::app::render::BlogListItem {
+            slug: e.slug.clone(),
+            title: e.title.clone(),
+            published_at: e.published_at.clone(),
+            updated_at: e.updated_at.clone(),
+            description: e.description.clone(),
+            tags: e.tags.clone(),
+        })
+        .collect();
+    posts.sort_by(|a, b| b.published_at.cmp(&a.published_at));
+
+    let total = posts.len();
+    let total_pages = (total + POSTS_PER_PAGE - 1) / POSTS_PER_PAGE;
+    let start = (page - 1) * POSTS_PER_PAGE;
+    let page_posts: Vec<_> = posts.into_iter().skip(start).take(POSTS_PER_PAGE).collect();
+
+    let html = crate::app::render::render_blog_list_page(
+        &client_ip,
+        &nonce,
+        page_posts,
+        page as u32,
+        total_pages as u32,
+    );
+    Html(html).into_response()
+}
+
 pub async fn search_handler(
     State(state): State<SharedAppState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,

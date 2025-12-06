@@ -1,6 +1,6 @@
 use crate::asset::asset_url;
 use crate::{
-    components::{BlogPage, TopPage},
+    components::{BlogListPage, BlogPage, TopPage},
     frontmatter::FrontMatter,
 };
 use leptos::prelude::*;
@@ -22,6 +22,16 @@ pub struct SearchHit {
     pub snippet: String,
     pub published_at: Option<String>,
     pub updated_at: Option<String>,
+}
+
+#[derive(Clone)]
+pub struct BlogListItem {
+    pub slug: String,
+    pub title: String,
+    pub published_at: Option<String>,
+    pub updated_at: Option<String>,
+    pub description: Option<String>,
+    pub tags: Vec<String>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -659,4 +669,56 @@ fn maybe_minify(html: String) -> String {
 #[cfg(debug_assertions)]
 fn maybe_minify(html: String) -> String {
     html
+}
+
+pub fn render_blog_list_page(
+    client_ip: &str,
+    nonce: &str,
+    posts: Vec<BlogListItem>,
+    current_page: u32,
+    total_pages: u32,
+) -> String {
+    let mut meta = HashMap::new();
+    meta.insert(
+        "description".to_string(),
+        "すずねーうのブログ記事一覧".to_string(),
+    );
+    meta.insert("og:title".to_string(), "Blog - すずねーう".to_string());
+    meta.insert(
+        "og:description".to_string(),
+        "すずねーうのブログ記事一覧".to_string(),
+    );
+    meta.insert("og:type".to_string(), "website".to_string());
+    meta.insert("og:url".to_string(), format!("{SITE_URL}/blog"));
+    meta.insert("twitter:card".to_string(), "summary".to_string());
+
+    let opts = HtmlOptions {
+        meta: Some(meta),
+        head_links: vec![
+            format!(
+                r#"<link rel="stylesheet" href="{href}" />"#,
+                href = asset_url("/assets/build/post-card.css")
+            ),
+            format!(
+                r#"<link rel="stylesheet" href="{href}" />"#,
+                href = asset_url("/assets/build/blog-list.css")
+            ),
+        ],
+        ..Default::default()
+    };
+
+    let body = Owner::new_root(None).with(|| {
+        view! {
+            <BlogListPage
+                client_ip=client_ip.to_string()
+                posts=posts.clone()
+                current_page=current_page
+                total_pages=total_pages
+            />
+        }
+        .to_html()
+    });
+
+    let html = wrap_html_with_options(&body, "Blog - すずねーう", &opts);
+    inject_runtime_tokens(&html, client_ip, nonce)
 }

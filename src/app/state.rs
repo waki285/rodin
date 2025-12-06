@@ -39,6 +39,8 @@ pub struct SearchIndexEntry {
     pub title: String,
     pub published_at: Option<String>,
     pub updated_at: Option<String>,
+    pub description: Option<String>,
+    pub tags: Vec<String>,
     pub title_lc: String,
     pub body_lc: String,
     pub body_chars: Arc<[char]>,
@@ -91,11 +93,19 @@ pub async fn build_prerendered_state() -> anyhow::Result<AppState> {
             let body_lower_str = plain.to_lowercase();
             let body_lower: Arc<[char]> = body_lower_str.chars().collect::<Vec<_>>().into();
 
+            let description = meta
+                .meta
+                .get("description")
+                .or_else(|| meta.meta.get("og:description"))
+                .cloned();
+
             let search_entry = SearchIndexEntry {
                 slug: slug.clone(),
                 title: meta.title.clone().unwrap_or_else(|| "Untitled".to_string()),
                 published_at: meta.published_at.clone(),
                 updated_at: meta.updated_at.clone(),
+                description,
+                tags: meta.tags.clone(),
                 title_lc: meta
                     .title
                     .as_deref()

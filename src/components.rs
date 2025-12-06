@@ -3,7 +3,112 @@ pub use search::SearchPage;
 
 use leptos::prelude::*;
 
+use crate::app::render::BlogListItem;
 use crate::frontmatter::FrontMatter;
+
+#[component]
+pub fn BlogListPage(
+    client_ip: String,
+    posts: Vec<BlogListItem>,
+    current_page: u32,
+    total_pages: u32,
+) -> impl IntoView {
+    view! {
+        <div class="blog-wrapper">
+            <HeaderBar
+                title="すずねーう".to_string()
+                subtitle=format!("{client_ip}")
+                current_path="/blog".to_string()
+            />
+            <main class="blog-container">
+                <h1 class="blog-list-title">"ブログ記事一覧"</h1>
+                <div class="posts-list">
+                    {posts.into_iter().map(|post| {
+                        let url = format!("/blog/{}", post.slug);
+                        let published = post.published_at.clone().unwrap_or_default();
+                        let updated = post.updated_at.clone().unwrap_or_default();
+                        let description = post.description.clone().unwrap_or_default();
+                        let tags = post.tags.clone();
+                        let published_html = if !published.is_empty() {
+                            format!("Published: {}", published)
+                        } else {
+                            String::new()
+                        };
+                        let updated_html = if !updated.is_empty() && updated != published {
+                            format!("Updated: {}", updated)
+                        } else {
+                            String::new()
+                        };
+                        let tags_html = if !tags.is_empty() {
+                            let chips: String = tags
+                                .iter()
+                                .map(|t| format!("<span>#{}</span>", t))
+                                .collect::<Vec<_>>()
+                                .join("");
+                            format!("<div class=\"flex flex-wrap gap-2 pt-1\">{}</div>", chips)
+                        } else {
+                            String::new()
+                        };
+                        view! {
+                            <article class="post-card">
+                                <div>
+                                    <a href=url class="not-prose">{post.title}</a>
+                                    <div>{updated_html}</div>
+                                </div>
+                                <div>{description}</div>
+                                <div>{published_html}</div>
+                                <div inner_html=tags_html></div>
+                            </article>
+                        }
+                    }).collect_view()}
+                </div>
+                <Pagination current_page=current_page total_pages=total_pages base_url="/blog".to_string() />
+            </main>
+        </div>
+    }
+}
+
+#[component]
+fn Pagination(current_page: u32, total_pages: u32, base_url: String) -> impl IntoView {
+    if total_pages <= 1 {
+        return None;
+    }
+
+    let prev_page = if current_page > 1 {
+        Some(current_page - 1)
+    } else {
+        None
+    };
+    let next_page = if current_page < total_pages {
+        Some(current_page + 1)
+    } else {
+        None
+    };
+
+    let page_url = |p: u32| {
+        if p == 1 {
+            base_url.clone()
+        } else {
+            format!("{}?page={}", base_url, p)
+        }
+    };
+
+    Some(view! {
+        <nav class="pagination" aria-label="ページナビゲーション">
+            {prev_page.map(|p| {
+                let url = page_url(p);
+                view! { <a href=url class="pagination-prev">"← 前のページ"</a> }
+            })}
+            <span class="pagination-info">
+                {format!("{} / {}", current_page, total_pages)}
+            </span>
+            {next_page.map(|p| {
+                let url = page_url(p);
+                view! { <a href=url class="pagination-next">"次のページ →"</a> }
+            })}
+        </nav>
+    })
+}
 
 #[component]
 pub fn BlogPage(
@@ -218,6 +323,7 @@ fn SocialIcon(kind: &'static str, href: &'static str, class: &'static str) -> im
 fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl IntoView {
     let title_clone = title.clone();
     let home_active = current_path == "/";
+    let blog_active = current_path.starts_with("/blog");
     let profile_active = current_path.starts_with("/profile");
     let search_active = current_path.starts_with("/search");
     let active_cls = "active";
@@ -245,6 +351,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                         </label>
                         <ul class="header-links">
                             <li><a data-prefetch="true" class=if home_active { active_cls } else { inactive_cls } href="/">"ホーム"</a></li>
+                            <li><a data-prefetch="true" class=if blog_active { active_cls } else { inactive_cls } href="/blog">"ブログ"</a></li>
                             <li><a data-prefetch="true" class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
                             <li><a data-prefetch="true" class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
                             <li>
@@ -260,6 +367,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                         <div class="mobile-menu">
                             <ul>
                                 <li><a data-prefetch="true" href="/">ホーム</a></li>
+                                <li><a data-prefetch="true" href="/blog">ブログ</a></li>
                                 <li><a data-prefetch="true" href="/profile">プロフィール</a></li>
                                 <li><a data-prefetch="true" href="/search">検索</a></li>
                                 <li>
