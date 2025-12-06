@@ -406,6 +406,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                         </label>
                         <ul class="header-links">
                             <li><a data-prefetch="true" class=if home_active { active_cls } else { inactive_cls } href="/">"ホーム"</a></li>
+                            <li><a data-prefetch="true" class=if blog_active { active_cls } else { inactive_cls } href="/blog">"ブログ"</a></li>
                             <li><a data-prefetch="true" class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
                             <li><a data-prefetch="true" class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
                             <li>
@@ -421,6 +422,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                         <div class="mobile-menu">
                             <ul>
                                 <li><a data-prefetch="true" href="/">ホーム</a></li>
+                                <li><a data-prefetch="true" href="/blog">ブログ</a></li>
                                 <li><a data-prefetch="true" href="/profile">プロフィール</a></li>
                                 <li><a data-prefetch="true" href="/search">検索</a></li>
                                 <li>
