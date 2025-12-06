@@ -137,4 +137,26 @@
   }
 }
 
+#let twitterembed(url: none, author: none, date: none, lang: "ja", body) = context {
+  let safe_body = body
+  let safe_url = if url == none { panic("twitterembed: url is required") } else { url }
+  let safe_author = if author == none { panic("twitterembed: author is required") } else { author }
+  let safe_date = if date == none { panic("twitterembed: date is required") } else { date }
+
+  if target() != "html" {
+    blockquote(safe_body, attribution: safe_author + " — " + safe_date)
+  } else {
+    let content = if type(safe_body) == str { html.raw(safe_body) } else { safe_body }
+
+    html.elem("blockquote", attrs: (
+      class: "twitter-tweet",
+      "data-lang": lang,
+    ))[
+      #html.elem("p", attrs: (lang: lang, dir: "ltr"))[ #content ]
+      #text(" — " + safe_author + " ")
+      #html.elem("a", attrs: (href: safe_url + "?ref_src=twsrc%5Etfw"))[ #safe_date ]
+    ]
+  }
+}
+
 #let twitter-link = "https://x.com/suzuneu_discord"

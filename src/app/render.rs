@@ -199,6 +199,10 @@ pub(crate) fn prerender_blog_page(meta: &FrontMatter, html_content: &str) -> Str
                 href = asset_url("/assets/build/prose-full.css")
             ),
         ],
+        head_scripts: vec![format!(
+            r#"<script src="{href}" nonce="{CSP_NONCE_TOKEN}" defer data-rodin-twitter-loader="1"></script>"#,
+            href = asset_url("/assets/twitter.js")
+        )],
         ..Default::default()
     };
 

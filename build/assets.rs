@@ -163,6 +163,47 @@ pub fn minify_assets() -> Result<()> {
         );
     }
 
+    // Step 5: Process twitter.js (lazy loader for embeds)
+    let twitter_src = PathBuf::from("static/twitter.js");
+    if twitter_src.exists() {
+        let tmp_dst = out_dir.join("twitter.js.tmp");
+        let esbuild = Command::new("node_modules/.bin/esbuild")
+            .args([
+                twitter_src.to_string_lossy().as_ref(),
+                "--platform=browser",
+                "--charset=utf8",
+                "--minify",
+                "--legal-comments=none",
+                "--drop:console",
+                "--tree-shaking=true",
+                format!("--outfile={}", tmp_dst.to_string_lossy()).as_ref(),
+            ])
+            .output();
+
+        let out = esbuild.map_err(|err| {
+            anyhow!(
+                "esbuild not run for twitter.js: {err}. Ensure node_modules/.bin/esbuild exists."
+            )
+        })?;
+
+        if !out.status.success() {
+            return Err(anyhow!(
+                "esbuild failed for twitter.js (status {}): {}",
+                out.status,
+                String::from_utf8_lossy(&out.stderr)
+            ));
+        }
+
+        let bytes = fs::read(&tmp_dst)?;
+        let hash = short_hash(&bytes);
+        let hashed_name = format!("twitter-{}.js", hash);
+        fs::rename(&tmp_dst, out_dir.join(&hashed_name))?;
+        manifest.insert(
+            "/assets/twitter.js".to_string(),
+            format!("/assets/build/{}", hashed_name),
+        );
+    }
+
     // write manifest
     let gen_dir = PathBuf::from("static/generated");
     fs::create_dir_all(&gen_dir)?;

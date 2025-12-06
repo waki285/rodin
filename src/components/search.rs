@@ -58,6 +58,7 @@ pub fn SearchPage(
                                                         published=hit.published_at.clone()
                                                         updated=hit.updated_at.clone()
                                                         reading_minutes=None
+                                                        slug=None
                                                     />
                                                 </div>
                                                 <p>{hit.snippet}</p>

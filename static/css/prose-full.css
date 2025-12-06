@@ -6,7 +6,7 @@
     --tw-prose-counters: oklch(55.1% 0.027 264.364);
     --tw-prose-bullets: oklch(87.2% 0.01 258.338);
     --tw-prose-quotes: oklch(21% 0.034 264.665);
-    --tw-prose-quote-borders: oklch(92.8% 0.006 264.531);
+    --tw-prose-quote-borders: #94a3b8;
     --tw-prose-captions: oklch(55.1% 0.027 264.364);
     --tw-prose-kbd: oklch(21% 0.034 264.665);
     --tw-prose-kbd-shadows: oklab(21% -0.00316127 -0.0338527/0.1);
@@ -18,7 +18,7 @@
     --tw-prose-invert-counters: oklch(70.7% 0.022 261.325);
     --tw-prose-invert-bullets: oklch(44.6% 0.03 256.802);
     --tw-prose-invert-quotes: oklch(96.7% 0.003 264.542);
-    --tw-prose-invert-quote-borders: oklch(37.3% 0.034 259.733);
+    --tw-prose-invert-quote-borders: #cbd5e1;
     --tw-prose-invert-captions: oklch(70.7% 0.022 261.325);
     --tw-prose-invert-kbd: #fff;
     --tw-prose-invert-kbd-shadows: #ffffff1a;
@@ -129,12 +129,6 @@
     padding-inline-start: 1em;
     font-style: italic;
     font-weight: 400;
-  }
-  .prose :where(blockquote p:first-of-type):not(:where([class~="not-prose"], [class~="not-prose"] *)):before {
-    content: open-quote;
-  }
-  .prose :where(blockquote p:last-of-type):not(:where([class~="not-prose"], [class~="not-prose"] *)):after {
-    content: close-quote;
   }
   .prose :where(blockquote strong):not(:where([class~="not-prose"], [class~="not-prose"] *)),
   .prose :where(thead th strong):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
@@ -365,30 +359,6 @@
   .dark .prose mark {
     background-color: #fbbf24;
     color: #1e293b;
-  }
-
-  /* Callout (blockquote) styling */
-  .prose blockquote {
-    background: #0f1928;
-    color: #e5e7eb;
-    border-left: 4px solid #1f2937;
-    padding: 1rem 1.25rem;
-    border-radius: 12px;
-    margin: 1.5rem 0;
-  }
-  .prose blockquote p {
-    margin: 0.45em 0;
-  }
-  .prose blockquote p:first-child {
-    margin-top: 0;
-  }
-  .prose blockquote p:last-child {
-    margin-bottom: 0;
-  }
-  .dark .prose blockquote {
-    background: #111827;
-    border-left-color: #1f2937;
-    color: #e5e7eb;
   }
 
   /* Typst custom callouts */
