@@ -56,7 +56,12 @@
         .map((l) => l.getAttribute("href"))
         .filter(Boolean);
 
-      const entry = { html: bodyHtml, title, stylesheets, timestamp: Date.now() };
+      // Extract script tags from the new page (excluding inline scripts and app.js)
+      const scripts = Array.from(doc.querySelectorAll('script[src]'))
+        .map((s) => s.getAttribute("src"))
+        .filter((src) => src && !src.includes("app.js") && !src.includes("app-"));
+
+      const entry = { html: bodyHtml, title, stylesheets, scripts, timestamp: Date.now() };
       cache.set(url, entry);
       return entry;
     };
@@ -103,6 +108,35 @@
       return Promise.all(promises);
     };
 
+    // Ensure all required scripts are loaded
+    const ensureScripts = (scripts) => {
+      const currentSrcs = new Set(
+        Array.from(document.querySelectorAll('script[src]'))
+          .map((s) => s.getAttribute("src"))
+          .filter(Boolean)
+      );
+
+      const promises = [];
+      for (const src of scripts) {
+        if (!currentSrcs.has(src)) {
+          // Add missing script
+          const script = document.createElement("script");
+          script.src = src;
+          script.async = true;
+          
+          // Wait for it to load
+          const loadPromise = new Promise((resolve) => {
+            script.onload = resolve;
+            script.onerror = resolve; // Don't block on error
+          });
+          promises.push(loadPromise);
+          
+          document.body.appendChild(script);
+        }
+      }
+      return Promise.all(promises);
+    };
+
     // Update DOM with new page content
     const updateDOM = async (entry, url) => {
       // Ensure all stylesheets are loaded first
@@ -113,6 +147,9 @@
 
       // Swap body content
       document.body.innerHTML = safeHTML(entry.html);
+
+      // Load page-specific scripts after DOM update
+      await ensureScripts(entry.scripts || []);
 
       // Re-run initialization scripts
       reinitialize();

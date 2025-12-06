@@ -6,6 +6,74 @@ use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::{collections::HashMap, fs, path::PathBuf, process::Command};
 
+/// Minify a JavaScript file with esbuild and return the minified content
+fn minify_js(src_path: &PathBuf) -> Result<String> {
+    let tmp_dst = src_path.with_extension("js.tmp");
+    let esbuild = Command::new("node_modules/.bin/esbuild")
+        .args([
+            src_path.to_string_lossy().as_ref(),
+            "--platform=browser",
+            "--charset=utf8",
+            "--minify",
+            "--legal-comments=none",
+            "--drop:console",
+            "--tree-shaking=true",
+            format!("--outfile={}", tmp_dst.to_string_lossy()).as_ref(),
+        ])
+        .output();
+
+    let out = esbuild.map_err(|err| {
+        anyhow!(
+            "esbuild not run for {}: {err}. Ensure node_modules/.bin/esbuild exists.",
+            src_path.display()
+        )
+    })?;
+
+    if !out.status.success() {
+        return Err(anyhow!(
+            "esbuild failed for {} (status {}): {}",
+            src_path.display(),
+            out.status,
+            String::from_utf8_lossy(&out.stderr)
+        ));
+    }
+
+    let content = fs::read_to_string(&tmp_dst)?;
+    fs::remove_file(&tmp_dst)?;
+    Ok(content)
+}
+
+/// Minify a JS file, hash it, write to out_dir, and return the hashed filename
+fn process_js_file(
+    src_path: &PathBuf,
+    out_dir: &PathBuf,
+    stem: &str,
+    manifest_key: &str,
+    manifest: &mut HashMap<String, String>,
+    content_transform: Option<impl FnOnce(String) -> String>,
+) -> Result<Option<String>> {
+    if !src_path.exists() {
+        return Ok(None);
+    }
+
+    let mut content = minify_js(src_path)?;
+
+    // Apply optional transformation (e.g., replacing paths)
+    if let Some(transform) = content_transform {
+        content = transform(content);
+    }
+
+    let hash = short_hash(content.as_bytes());
+    let hashed_name = format!("{}-{}.js", stem, hash);
+    fs::write(out_dir.join(&hashed_name), &content)?;
+    manifest.insert(
+        manifest_key.to_string(),
+        format!("/assets/build/{}", hashed_name),
+    );
+
+    Ok(Some(hashed_name))
+}
+
 pub fn minify_assets() -> Result<()> {
     let out_dir = PathBuf::from("static/build");
     fs::create_dir_all(&out_dir)?;
@@ -75,134 +143,44 @@ pub fn minify_assets() -> Result<()> {
     }
 
     // Step 3: Process home.js first so we can replace references in app.js
-    let mut home_js_hashed: Option<String> = None;
-    let home_src = PathBuf::from("static/home.js");
-    if home_src.exists() {
-        let tmp_dst = out_dir.join("home.js.tmp");
-        let esbuild = Command::new("node_modules/.bin/esbuild")
-            .args([
-                home_src.to_string_lossy().as_ref(),
-                "--platform=browser",
-                "--charset=utf8",
-                "--minify",
-                "--legal-comments=none",
-                "--drop:console",
-                "--tree-shaking=true",
-                format!("--outfile={}", tmp_dst.to_string_lossy()).as_ref(),
-            ])
-            .output();
-
-        let out = esbuild.map_err(|err| {
-            anyhow!("esbuild not run for home.js: {err}. Ensure node_modules/.bin/esbuild exists.")
-        })?;
-
-        if !out.status.success() {
-            return Err(anyhow!(
-                "esbuild failed for home.js (status {}): {}",
-                out.status,
-                String::from_utf8_lossy(&out.stderr)
-            ));
-        }
-        let bytes = fs::read(&tmp_dst)?;
-        let hash = short_hash(&bytes);
-        let hashed_name = format!("home-{}.js", hash);
-        fs::rename(&tmp_dst, out_dir.join(&hashed_name))?;
-        manifest.insert(
-            "/assets/build/home.js".to_string(),
-            format!("/assets/build/{}", hashed_name),
-        );
-        home_js_hashed = Some(hashed_name);
-    }
+    let home_js_hashed = process_js_file(
+        &PathBuf::from("static/home.js"),
+        &out_dir,
+        "home",
+        "/assets/build/home.js",
+        &mut manifest,
+        None::<fn(String) -> String>,
+    )?;
 
     // Step 4: Process app.js, replacing home.js reference with hashed version
-    let app_src = PathBuf::from("static/app.js");
-    if app_src.exists() {
-        let tmp_dst = out_dir.join("app.js.tmp");
-        let esbuild = Command::new("node_modules/.bin/esbuild")
-            .args([
-                app_src.to_string_lossy().as_ref(),
-                "--platform=browser",
-                "--charset=utf8",
-                "--minify",
-                "--legal-comments=none",
-                "--drop:console",
-                "--tree-shaking=true",
-                format!("--outfile={}", tmp_dst.to_string_lossy()).as_ref(),
-            ])
-            .output();
-
-        let out = esbuild.map_err(|err| {
-            anyhow!("esbuild not run for app.js: {err}. Ensure node_modules/.bin/esbuild exists.")
-        })?;
-
-        if !out.status.success() {
-            return Err(anyhow!(
-                "esbuild failed for app.js (status {}): {}",
-                out.status,
-                String::from_utf8_lossy(&out.stderr)
-            ));
-        }
-
-        // Replace home.js reference with hashed version
-        let mut content = fs::read_to_string(&tmp_dst)?;
-        if let Some(ref hashed) = home_js_hashed {
-            content = content.replace(
-                "/assets/build/home.js",
-                &format!("/assets/build/{}", hashed),
-            );
-        }
-
-        // Compute hash of final content and write
-        let hash = short_hash(content.as_bytes());
-        let hashed_name = format!("app-{}.js", hash);
-        fs::write(out_dir.join(&hashed_name), &content)?;
-        fs::remove_file(&tmp_dst)?;
-        manifest.insert(
-            "/assets/build/app.js".to_string(),
-            format!("/assets/build/{}", hashed_name),
-        );
-    }
+    let home_js_hashed_clone = home_js_hashed.clone();
+    process_js_file(
+        &PathBuf::from("static/app.js"),
+        &out_dir,
+        "app",
+        "/assets/build/app.js",
+        &mut manifest,
+        Some(move |content: String| {
+            if let Some(ref hashed) = home_js_hashed_clone {
+                content.replace(
+                    "/assets/build/home.js",
+                    &format!("/assets/build/{}", hashed),
+                )
+            } else {
+                content
+            }
+        }),
+    )?;
 
     // Step 5: Process twitter.js (lazy loader for embeds)
-    let twitter_src = PathBuf::from("static/twitter.js");
-    if twitter_src.exists() {
-        let tmp_dst = out_dir.join("twitter.js.tmp");
-        let esbuild = Command::new("node_modules/.bin/esbuild")
-            .args([
-                twitter_src.to_string_lossy().as_ref(),
-                "--platform=browser",
-                "--charset=utf8",
-                "--minify",
-                "--legal-comments=none",
-                "--drop:console",
-                "--tree-shaking=true",
-                format!("--outfile={}", tmp_dst.to_string_lossy()).as_ref(),
-            ])
-            .output();
-
-        let out = esbuild.map_err(|err| {
-            anyhow!(
-                "esbuild not run for twitter.js: {err}. Ensure node_modules/.bin/esbuild exists."
-            )
-        })?;
-
-        if !out.status.success() {
-            return Err(anyhow!(
-                "esbuild failed for twitter.js (status {}): {}",
-                out.status,
-                String::from_utf8_lossy(&out.stderr)
-            ));
-        }
-
-        let bytes = fs::read(&tmp_dst)?;
-        let hash = short_hash(&bytes);
-        let hashed_name = format!("twitter-{}.js", hash);
-        fs::rename(&tmp_dst, out_dir.join(&hashed_name))?;
-        manifest.insert(
-            "/assets/twitter.js".to_string(),
-            format!("/assets/build/{}", hashed_name),
-        );
-    }
+    process_js_file(
+        &PathBuf::from("static/twitter.js"),
+        &out_dir,
+        "twitter",
+        "/assets/twitter.js",
+        &mut manifest,
+        None::<fn(String) -> String>,
+    )?;
 
     // write manifest
     let gen_dir = PathBuf::from("static/generated");
