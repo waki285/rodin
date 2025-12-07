@@ -326,6 +326,7 @@
     initShowIp();
     initNavMenus();
     initCopyButtons();
+    initShareButtons();
     initHomeScript();
   };
 
@@ -481,6 +482,49 @@
   };
 
   // ============================================
+  // Share Buttons (Native share + fallbacks)
+  // ============================================
+  const initShareButtons = () => {
+    document.querySelectorAll("[data-share-native]").forEach((btn) => {
+      if (!(btn instanceof HTMLButtonElement)) return;
+      if (btn.dataset.shareInit) return;
+      btn.dataset.shareInit = "1";
+      const originalAria = btn.getAttribute("aria-label") || "共有";
+      const flash = (label) => {
+        btn.setAttribute("aria-label", label);
+        btn.classList.add("share-flash");
+        setTimeout(() => {
+          btn.setAttribute("aria-label", originalAria);
+          btn.classList.remove("share-flash");
+        }, 1200);
+      };
+      btn.addEventListener("click", async () => {
+        const url = btn.getAttribute("data-share-url");
+        const title = btn.getAttribute("data-share-title") || document.title;
+        if (!url) return;
+        if (navigator.share) {
+          try {
+            await navigator.share({ url, title });
+            return;
+          } catch (_) {
+            // continue to clipboard fallback
+          }
+        }
+        if (navigator.clipboard?.writeText) {
+          try {
+            await navigator.clipboard.writeText(url);
+            flash("コピーしました");
+            return;
+          } catch (_) {
+            // ignore and fall through
+          }
+        }
+        window.open(url, "_blank", "noopener");
+      });
+    });
+  };
+
+  // ============================================
   // Home-specific Script
   // ============================================
   const initHomeScript = () => {
@@ -539,5 +583,6 @@
   initShowIp();
   initNavMenus();
   initCopyButtons();
+  initShareButtons();
   initHomeScript();
 })();

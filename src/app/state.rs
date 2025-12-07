@@ -41,6 +41,7 @@ pub struct SearchIndexEntry {
     pub updated_at: Option<String>,
     pub description: Option<String>,
     pub tags: Vec<String>,
+    pub breadcrumbs: Vec<String>,
     pub title_lc: String,
     pub body_lc: String,
     pub body_chars: Arc<[char]>,
@@ -106,6 +107,7 @@ pub async fn build_prerendered_state() -> anyhow::Result<AppState> {
                 updated_at: meta.updated_at.clone(),
                 description,
                 tags: meta.tags.clone(),
+                breadcrumbs: meta.breadcrumbs.clone(),
                 title_lc: meta
                     .title
                     .as_deref()

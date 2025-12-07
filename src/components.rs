@@ -4,7 +4,9 @@ pub use search::SearchPage;
 use leptos::prelude::*;
 
 use crate::app::render::BlogListItem;
+use crate::app::render::SITE_URL;
 use crate::frontmatter::FrontMatter;
+use urlencoding::encode;
 
 #[component]
 pub fn BlogListPage(
@@ -42,7 +44,13 @@ pub fn BlogListPage(
                         let tags_html = if !tags.is_empty() {
                             let chips: String = tags
                                 .iter()
-                                .map(|t| format!("<span>#{}</span>", t))
+                                .map(|t| {
+                                    let href = format!("/tags/{}", encode(t));
+                                    format!(
+                                        r#"<a class="blog-tag" href="{href}"><span class="blog-tag-hash">#</span><span>{}</span></a>"#,
+                                        t
+                                    )
+                                })
                                 .collect::<Vec<_>>()
                                 .join("");
                             format!("<div class=\"flex flex-wrap gap-2 pt-1\">{}</div>", chips)
@@ -161,7 +169,7 @@ pub fn BlogPage(
                     }
                 })}
                 <div class="blog-title">
-                    <h1>{article_title}</h1>
+                    <h1>{article_title.clone()}</h1>
                     <ShowSubtitle text=subtitle_view />
                 </div>
                 <MetaRow
@@ -170,8 +178,76 @@ pub fn BlogPage(
                     reading_minutes=meta.reading_minutes
                     slug=current_path.strip_prefix("/blog/").map(|s| s.to_string())
                 />
-                <ShowTags tags=meta.tags.clone() />
+                <div class="tags-share-row">
+                    <ShowTags tags=meta.tags.clone() />
+                    <ShareButtons
+                        title=article_title.clone()
+                        slug=current_path.strip_prefix("/blog/").map(|s| s.to_string())
+                    />
+                </div>
                 <article inner_html=html_content></article>
+            </main>
+        </div>
+    }
+}
+
+#[component]
+pub fn TagListPage(client_ip: String, tag: String, posts: Vec<BlogListItem>) -> impl IntoView {
+    view! {
+        <div class="blog-wrapper">
+            <HeaderBar
+                title="すずねーう".to_string()
+                subtitle=format!("{client_ip}")
+                current_path=format!("/tags/{tag}")
+            />
+            <main class="blog-container">
+                <h1 class="blog-list-title">{format!("タグ: #{tag}")}</h1>
+                <div class="posts-list">
+                    {posts.into_iter().map(|post| {
+                        let url = format!("/blog/{}", post.slug);
+                        let published = post.published_at.clone().unwrap_or_default();
+                        let updated = post.updated_at.clone().unwrap_or_default();
+                        let description = post.description.clone().unwrap_or_default();
+                        let tags = post.tags.clone();
+                        let published_html = if !published.is_empty() {
+                            format!("Published: {}", published)
+                        } else {
+                            String::new()
+                        };
+                        let updated_html = if !updated.is_empty() && updated != published {
+                            format!("Updated: {}", updated)
+                        } else {
+                            String::new()
+                        };
+                        let tags_html = if !tags.is_empty() {
+                            let chips: String = tags
+                                .iter()
+                                .map(|t| {
+                                    let href = format!("/tags/{}", encode(t));
+                                    format!(
+                                        r#"<a class="blog-tag" href="{href}"><span class="blog-tag-hash">#</span><span>{}</span></a>"#,
+                                        t
+                                    )
+                                })
+                                .collect::<Vec<_>>()
+                                .join("");
+                            format!("<div class=\"flex flex-wrap gap-2 pt-1\">{}</div>", chips)
+                        } else {
+                            String::new()
+                        };
+                        view! {
+                            <article class="post-card">
+                                <div>
+                                    <a href=url class="not-prose">{post.title}</a>
+                                    <div>{updated_html}</div>
+                                </div>
+                                <div>{description}</div>
+                                <div>{published_html}</div>
+                                <div inner_html=tags_html></div>
+                            </article>
+                        }
+                    }).collect_view()}
+                </div>
             </main>
         </div>
     }
@@ -503,15 +579,16 @@ fn ShowTags(tags: Vec<String>) -> impl IntoView {
     let chips = tags
         .into_iter()
         .map(|t| {
+            let href = format!("/tags/{}", encode(&t));
             view! {
-                <span class="blog-tag">
+                <a class="blog-tag" href=href>
                     <span class="blog-tag-hash">"#"</span>
                     <span>{t}</span>
-                </span>
+                </a>
             }
         })
         .collect::<Vec<_>>();
-    view! { <div class="blog-tags">{chips}</div> }
+    view! { <div class="blog-tags not-prose">{chips}</div> }
 }
 
 #[component]
@@ -521,6 +598,87 @@ fn ShowSubtitle(text: String) -> impl IntoView {
     } else {
         Some(view! { <p class="not-prose">{text}</p> })
     }
+}
+
+#[component]
+fn ShareButtons(title: String, slug: Option<String>) -> impl IntoView {
+    let Some(slug) = slug else {
+        return None::<View<_>>;
+    };
+
+    let safe_title = if title.is_empty() {
+        "すずねーうのブログ".to_string()
+    } else {
+        title.clone()
+    };
+
+    let base = SITE_URL.trim_end_matches('/');
+    let page_url = format!("{base}/blog/{slug}");
+    let tweet_text = format!("{safe_title}｜すずねーう");
+    let tweet_url = format!(
+        "https://twitter.com/intent/tweet?text={}&url={}",
+        encode(&tweet_text),
+        encode(&page_url)
+    );
+    let hatena_url = format!("https://b.hatena.ne.jp/entry/{}", page_url);
+
+    Some(view! {
+        <div class="share-row not-prose" aria-label="共有">
+            <button
+                type="button"
+                class="share-btn share-native"
+                data-share-native="1"
+                data-share-url=page_url.clone()
+                data-share-title=tweet_text.clone()
+                aria-label="共有"
+            >
+                <svg class="share-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                        d="M15 5a3 3 0 1 1 .83 2.07l-6.12 3.18a3 3 0 0 1 0 3.5l6.12 3.18a3 3 0 1 1-.78 1.84l-6.12-3.18a3 3 0 1 1 0-4.34l6.12-3.18A3 3 0 0 1 15 5Z"
+                        fill="currentColor"
+                    />
+                </svg>
+                <span class="sr-only">"共有"</span>
+            </button>
+            <a
+                class="share-btn share-twitter"
+                href=tweet_url
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Twitter で共有"
+            >
+                <svg class="share-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                        d="M20.77 7.19c.01.18.01.36.01.55 0 5.58-4.25 12-12.03 12-2.39 0-4.62-.69-6.5-1.88a8.52 8.52 0 0 0 6.28-1.77A4.24 4.24 0 0 1 3.9 13.7c.66.1 1.26.08 1.86-.07a4.23 4.23 0 0 1-3.4-4.16v-.05c.57.32 1.24.5 1.94.53a4.23 4.23 0 0 1-1.88-3.52c0-.78.2-1.48.57-2.1A12.03 12.03 0 0 0 12 8.27a4.23 4.23 0 0 1 7.2-3.86 8.46 8.46 0 0 0 2.68-1.03 4.25 4.25 0 0 1-1.86 2.34 8.45 8.45 0 0 0 2.43-.67 9.07 9.07 0 0 1-2.68 2.14Z"
+                        fill="currentColor"
+                    />
+                </svg>
+                <span class="sr-only">"Twitter"</span>
+            </a>
+            <a
+                class="share-btn share-hatena"
+                href=hatena_url
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="はてなブックマーク"
+            >
+                <svg class="share-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="currentColor" />
+                    <text
+                        x="7.5"
+                        y="15.5"
+                        fill="white"
+                        font-size="8"
+                        font-family="Inter, 'Helvetica Neue', Arial, sans-serif"
+                        font-weight="700"
+                    >
+                        {"B!"}
+                    </text>
+                </svg>
+                <span class="sr-only">"はてなブックマーク"</span>
+            </a>
+        </div>
+    })
 }
 
 #[component]

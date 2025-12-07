@@ -1,6 +1,6 @@
 use crate::asset::asset_url;
 use crate::{
-    components::{BlogListPage, BlogPage, TopPage},
+    components::{BlogListPage, BlogPage, TagListPage, TopPage},
     frontmatter::FrontMatter,
 };
 use leptos::prelude::*;
@@ -129,7 +129,8 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
 <body>
 {body}
 </body>
-</html>"##, KISO.as_str()
+</html>"##,
+        KISO.as_str()
     )
 }
 
@@ -746,5 +747,53 @@ pub fn render_blog_list_page(
     });
 
     let html = wrap_html_with_options(&body, "Blog - すずねーう", &opts);
+    inject_runtime_tokens(&html, client_ip, nonce)
+}
+
+pub fn render_tag_page(
+    client_ip: &str,
+    nonce: &str,
+    tag: &str,
+    posts: Vec<BlogListItem>,
+) -> String {
+    let tag_title = format!("タグ: #{tag}");
+    let mut meta = HashMap::new();
+    let desc = format!("タグ「{}」の記事一覧", tag);
+    let canonical = format!("{SITE_URL}/tags/{tag}");
+    meta.insert("description".to_string(), desc.clone());
+    meta.insert("og:title".to_string(), tag_title.clone());
+    meta.insert("og:description".to_string(), desc.clone());
+    meta.insert("og:type".to_string(), "website".to_string());
+    meta.insert("og:url".to_string(), canonical.clone());
+    meta.insert("twitter:card".to_string(), "summary".to_string());
+    meta.insert("link:canonical".to_string(), canonical);
+
+    let opts = HtmlOptions {
+        meta: Some(meta),
+        head_links: vec![
+            format!(
+                r#"<link rel="stylesheet" href="{href}" />"#,
+                href = asset_url("/assets/build/post-card.css")
+            ),
+            format!(
+                r#"<link rel="stylesheet" href="{href}" />"#,
+                href = asset_url("/assets/build/blog-list.css")
+            ),
+        ],
+        ..Default::default()
+    };
+
+    let body = Owner::new_root(None).with(|| {
+        view! {
+            <TagListPage
+                client_ip=client_ip.to_string()
+                tag=tag.to_string()
+                posts=posts.clone()
+            />
+        }
+        .to_html()
+    });
+
+    let html = wrap_html_with_options(&body, &tag_title, &opts);
     inject_runtime_tokens(&html, client_ip, nonce)
 }

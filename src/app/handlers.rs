@@ -17,7 +17,10 @@ use super::{
     render::{inject_runtime_tokens, SITE_URL},
     state::{self, AppState, SharedAppState},
 };
-use crate::app::{render::{SearchHit, render_search_page}, state::SearchIndexEntry};
+use crate::app::{
+    render::{render_search_page, render_tag_page, BlogListItem, SearchHit},
+    state::SearchIndexEntry,
+};
 
 const CSP_PREFIX: &str = "default-src 'self'; script-src 'self' 'nonce-";
 const CSP_SUFFIX: &str = "' static.cloudflareinsights.com platform.twitter.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-src https://platform.twitter.com https://syndication.twitter.com; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; trusted-types default rodin-spa rodin-twitter; require-trusted-types-for 'script'";
@@ -256,6 +259,54 @@ pub async fn search_handler(
         HeaderValue::from_static("noindex, nofollow"),
     );
     res
+}
+
+pub async fn tag_handler(
+    State(state): State<SharedAppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Path(tag_raw): Path<String>,
+    Extension(nonce): Extension<String>,
+) -> Response {
+    let tag = tag_raw.trim();
+    if tag.is_empty() {
+        return not_found_response().await;
+    }
+
+    let state = state.read().await;
+    let client_ip = addr.ip().to_string();
+    let tag_lc = tag.to_lowercase();
+
+    let mut posts: Vec<BlogListItem> = state
+        .search_index
+        .iter()
+        .filter(|entry| {
+            entry
+                .tags
+                .iter()
+                .any(|t| t.eq_ignore_ascii_case(tag) || t.to_lowercase() == tag_lc)
+                || entry
+                    .breadcrumbs
+                    .iter()
+                    .any(|b| b.eq_ignore_ascii_case(tag) || b.to_lowercase() == tag_lc)
+        })
+        .map(|e| BlogListItem {
+            slug: e.slug.clone(),
+            title: e.title.clone(),
+            published_at: e.published_at.clone(),
+            updated_at: e.updated_at.clone(),
+            description: e.description.clone(),
+            tags: e.tags.clone(),
+        })
+        .collect();
+
+    if posts.is_empty() {
+        return not_found_response().await;
+    }
+
+    posts.sort_by(|a, b| b.published_at.cmp(&a.published_at));
+
+    let html = render_tag_page(&client_ip, &nonce, tag, posts);
+    Html(html).into_response()
 }
 
 fn build_snippet(body_chars: &[char], body_lower: &[char], needle: &[char]) -> String {

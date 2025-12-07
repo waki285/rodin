@@ -70,6 +70,7 @@ pub async fn run() -> anyhow::Result<()> {
         .route("/pgp", get(handlers::pgp_handler))
         .route("/blog", get(handlers::blog_list_handler))
         .route("/blog/{slug}", get(handlers::blog_handler))
+        .route("/tags/{tag}", get(handlers::tag_handler))
         .route("/search", get(handlers::search_handler))
         .route("/rss.xml", get(handlers::rss_handler))
         .route("/__admin/reload", post(handlers::reload_handler))
