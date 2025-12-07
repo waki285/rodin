@@ -9,7 +9,7 @@ pub fn write_sitemap(
     output_path: &str,
 ) -> Result<()> {
     let homepage_lastmod = latest_lastmod(metas);
-    let mut urls = Vec::with_capacity(metas.len() + 3);
+    let mut urls = Vec::with_capacity(metas.len() + 4);
     urls.push(SitemapEntry {
         loc: format!("{site_url}/"),
         lastmod: homepage_lastmod.clone(),
@@ -29,6 +29,10 @@ pub fn write_sitemap(
             lastmod,
         });
     }
+    urls.push(SitemapEntry {
+        loc: format!("{site_url}/rss.xml"),
+        lastmod: homepage_lastmod.clone(),
+    });
 
     for meta in metas {
         let loc = format!("{site_url}/blog/{}", meta.slug);

@@ -1,10 +1,11 @@
 use axum::{
     body::Body,
     extract::{ConnectInfo, Extension, Path, Query, State},
-    http::{HeaderMap, HeaderValue, Request, StatusCode},
+    http::{header, HeaderMap, HeaderValue, Request, StatusCode},
     middleware::Next,
     response::{Html, IntoResponse, Redirect, Response},
 };
+use chrono::Utc;
 use std::{
     env,
     net::SocketAddr,
@@ -13,13 +14,14 @@ use std::{
 
 use super::{
     markdown_enabled,
-    render::inject_runtime_tokens,
+    render::{inject_runtime_tokens, SITE_URL},
     state::{self, AppState, SharedAppState},
 };
-use crate::app::render::{render_search_page, SearchHit};
+use crate::app::{render::{SearchHit, render_search_page}, state::SearchIndexEntry};
 
 const CSP_PREFIX: &str = "default-src 'self'; script-src 'self' 'nonce-";
 const CSP_SUFFIX: &str = "' static.cloudflareinsights.com platform.twitter.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-src https://platform.twitter.com https://syndication.twitter.com; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; trusted-types default rodin-spa rodin-twitter; require-trusted-types-for 'script'";
+const RSS_LIMIT: usize = 30;
 
 pub(crate) static TRUST_PROXY_ENABLED: LazyLock<bool> = LazyLock::new(|| {
     env::var("TRUST_PROXY")
@@ -56,6 +58,21 @@ fn is_ai_crawler(headers: &HeaderMap) -> bool {
         .and_then(|v| v.to_str().ok())
         .map(|ua| AI_CRAWLER_PATTERNS.iter().any(|p| ua.contains(p)))
         .unwrap_or(false)
+}
+
+fn escape_xml(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
+
+fn to_rfc2822(date: &str) -> Option<String> {
+    let iso = format!("{date}T00:00:00+09:00");
+    chrono::DateTime::parse_from_rfc3339(&iso)
+        .ok()
+        .map(|d| d.to_rfc2822())
 }
 
 pub async fn reload_handler(
@@ -296,6 +313,66 @@ fn is_curl(headers: &HeaderMap) -> bool {
         .and_then(|v| v.to_str().ok())
         .map(|ua| ua.to_lowercase().contains("curl"))
         .unwrap_or(false)
+}
+
+pub async fn rss_handler(State(state): State<SharedAppState>) -> Response {
+    let state = state.read().await;
+    let mut items: Vec<&SearchIndexEntry> = state.search_index.iter().collect();
+    items.sort_by(|a, b| b.published_at.cmp(&a.published_at));
+
+    let now = Utc::now().to_rfc2822();
+
+    let mut xml = String::new();
+    xml.push_str(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
+    xml.push('\n');
+    xml.push_str("<rss version=\"2.0\">\n<channel>\n");
+    xml.push_str(&format!(
+        "<title>{}</title>\n",
+        escape_xml("すずねーうのブログ")
+    ));
+    xml.push_str(&format!("<link>{}</link>\n", SITE_URL));
+    xml.push_str(&format!(
+        "<description>{}</description>\n",
+        escape_xml("すずねーうのブログのRSSフィード")
+    ));
+    xml.push_str("<language>ja</language>\n");
+    xml.push_str(&format!("<lastBuildDate>{}</lastBuildDate>\n", now));
+    xml.push_str("<generator>rodin</generator>\n");
+
+    for entry in items.into_iter().take(RSS_LIMIT) {
+        let link = format!("{}/blog/{}", SITE_URL, entry.slug);
+        let desc = entry
+            .description
+            .as_deref()
+            .unwrap_or_else(|| entry.title.as_str());
+        let pub_date = entry
+            .published_at
+            .as_deref()
+            .and_then(to_rfc2822)
+            .or_else(|| entry.updated_at.as_deref().and_then(to_rfc2822));
+
+        xml.push_str("<item>\n");
+        xml.push_str(&format!("<title>{}</title>\n", escape_xml(&entry.title)));
+        xml.push_str(&format!("<link>{}</link>\n", link));
+        xml.push_str(&format!("<guid isPermaLink=\"true\">{}</guid>\n", link));
+        xml.push_str(&format!(
+            "<description>{}</description>\n",
+            escape_xml(desc)
+        ));
+        if let Some(pd) = pub_date {
+            xml.push_str(&format!("<pubDate>{}</pubDate>\n", pd));
+        }
+        xml.push_str("</item>\n");
+    }
+
+    xml.push_str("</channel>\n</rss>");
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")
+        .header(header::CONTENT_DISPOSITION, "inline")
+        .body(xml.into())
+        .unwrap()
 }
 
 pub async fn profile_handler(

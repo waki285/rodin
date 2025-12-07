@@ -71,6 +71,7 @@ pub async fn run() -> anyhow::Result<()> {
         .route("/blog", get(handlers::blog_list_handler))
         .route("/blog/{slug}", get(handlers::blog_handler))
         .route("/search", get(handlers::search_handler))
+        .route("/rss.xml", get(handlers::rss_handler))
         .route("/__admin/reload", post(handlers::reload_handler))
         .route_service(
             "/sitemap.xml",
@@ -294,6 +295,7 @@ fn guess_mime(ext: &str) -> Option<&'static str> {
         "pub" => Some("text/plain; charset=utf-8"),
         "asc" => Some("application/pgp-keys"),
         "gpg" => Some("application/pgp-signature"),
+        "xml" => Some("application/xml; charset=utf-8"),
         _ => None,
     }
 }
