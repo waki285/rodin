@@ -73,6 +73,7 @@
       nodes.forEach((n) => io.observe(n));
       return;
     }
+    // Load a bit earlier before the tweet actually enters viewport
     io = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting || e.intersectionRatio > 0)) {
@@ -81,7 +82,7 @@
           io = null;
         }
       },
-      { rootMargin: "200px 0px" }
+      { rootMargin: "400px 0px" }
     );
     nodes.forEach((n) => io.observe(n));
   };

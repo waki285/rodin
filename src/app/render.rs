@@ -190,6 +190,8 @@ pub(crate) fn prerender_blog_page(meta: &FrontMatter, html_content: &str) -> Str
         .entry("link:canonical".to_string())
         .or_insert_with(|| format!("{SITE_URL}/blog/{}", meta.slug));
 
+    let has_twitter_embed = html_content.contains("twitter-tweet");
+
     let opts = HtmlOptions {
         meta: Some(meta_map),
         structured_data: if structured_vec.is_empty() {
@@ -207,10 +209,14 @@ pub(crate) fn prerender_blog_page(meta: &FrontMatter, html_content: &str) -> Str
                 href = asset_url("/assets/build/prose-full.css")
             ),
         ],
-        head_scripts: vec![format!(
-            r#"<script src="{href}" nonce="{CSP_NONCE_TOKEN}" defer data-rodin-twitter-loader="1"></script>"#,
-            href = asset_url("/assets/twitter.js")
-        )],
+        head_scripts: if has_twitter_embed {
+            vec![format!(
+                r#"<script src="{href}" nonce="{CSP_NONCE_TOKEN}" defer data-rodin-twitter-loader="1"></script>"#,
+                href = asset_url("/assets/twitter.js")
+            )]
+        } else {
+            Vec::new()
+        },
         ..Default::default()
     };
 
