@@ -6,6 +6,7 @@ use crate::{
 use leptos::prelude::*;
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 #[cfg(not(debug_assertions))]
 use minify_html::{minify, Cfg as HtmlMinCfg};
@@ -14,6 +15,11 @@ pub(crate) const CLIENT_IP_TOKEN: &str = "__CLIENT_IP_PLACEHOLDER__";
 pub(crate) const CSP_NONCE_TOKEN: &str = "__CSP_NONCE__";
 const SITE_URL: &str = "https://suzuneu.com";
 const ORG_ID: &str = "https://suzuneu.com/#organization";
+
+static KISO: LazyLock<String> = LazyLock::new(|| {
+    let kiso = asset_url("/assets/build/kiso.css").replace("/assets", "static");
+    std::fs::read_to_string(&kiso).expect(&kiso)
+});
 
 #[derive(Clone)]
 pub struct SearchHit {
@@ -103,6 +109,7 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="icon" href="/android-chrome-192x192.png" sizes="192x192" />
   <link rel="icon" href="/android-chrome-512x512.png" sizes="512x512" />
+  <style>{}</style>
   <link rel="stylesheet" href="{critical}" />
   <link rel="stylesheet" href="{lazy_css}" data-unblock-css="1" media="print" />
   <noscript><link rel="stylesheet" href="{lazy_css}" /></noscript>
@@ -121,7 +128,7 @@ pub(crate) fn wrap_html_with_options(body: &str, title: &str, opts: &HtmlOptions
 <body>
 {body}
 </body>
-</html>"##
+</html>"##, KISO.as_str()
     )
 }
 

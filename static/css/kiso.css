@@ -1,0 +1,64 @@
+/* Copied from kiso.css v1.2.2 | MIT License | https://github.com/tak-dcxi/kiso.css */
+@layer kiso, properties, theme, base, components, utilities;
+@layer kiso {
+  *,
+  ::after,
+  ::before,
+  ::backdrop {
+    box-sizing: border-box;
+    border: 0 solid;
+    margin: 0;
+    padding: 0;
+  }
+
+  html,
+  :host {
+    text-size-adjust: 100%;
+    tab-size: 4;
+    line-height: 1.5;
+    font-feature-settings: normal;
+  }
+
+  :root {
+    scrollbar-gutter: stable;
+    line-break: strict;
+    overflow-wrap: anywhere;
+    text-autospace: normal;
+    -webkit-tap-highlight-color: transparent;
+    text-spacing-trim: trim-start;
+  }
+
+  body {
+    min-block-size: 100dvb;
+  }
+
+  time {
+    text-autospace: no-autospace;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    /* Prevents the last line of text from ending with a single word, which can look awkward (known as an orphan). */
+    text-wrap: pretty;
+  }
+
+  :where(
+      button,
+      input:is([type="button" i], [type="submit" i], [type="reset" i]),
+      [role="tab" i],
+      [role="button" i],
+      [role="option" i]
+    ),
+  ::file-selector-button {
+    /*
+  * On iOS, double-tapping a button can cause zooming, which harms usability.
+  * `touch-action: manipulation` is specified to disable zooming on double-tap.
+  * Third-party plugins such as Swiper sometimes use div elements with these roles as buttons, since double-tapping a div can still trigger zooming, it's advisable to specify this property.
+  */
+    touch-action: manipulation;
+  }
+}
