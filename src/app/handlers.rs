@@ -260,17 +260,23 @@ pub async fn search_handler(
     let q_raw = params.q.unwrap_or_default();
     let q = q_raw.trim();
 
+    // どの検索パスを通ったかを明示するためのラベル
+    let mut search_source = "none";
+
     let hits = if q.is_empty() {
         Vec::new()
     } else if let Some(cfg) = load_opensearch_config() {
+        search_source = "opensearch";
         match search_opensearch(&cfg, q).await {
             Ok(res) => res,
             Err(e) => {
                 eprintln!("opensearch search failed: {e}");
+                search_source = "local-fallback";
                 search_local(&state_guard.search_index, q)
             }
         }
     } else {
+        search_source = "local";
         search_local(&state_guard.search_index, q)
     };
 
@@ -280,6 +286,10 @@ pub async fn search_handler(
         "X-Robots-Tag",
         HeaderValue::from_static("noindex, nofollow"),
     );
+    // 検索がどの経路を使ったかをレスポンスヘッダーで可視化
+    if let Ok(val) = HeaderValue::from_str(search_source) {
+        res.headers_mut().insert("Rodin-Search-Source", val);
+    }
     res
 }
 
