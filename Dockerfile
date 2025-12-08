@@ -68,7 +68,7 @@ RUN --mount=type=cache,target=/sccache,sharing=locked cargo build --release
 FROM rustlang/rust:nightly-slim AS runtime
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates git && \
+    apt-get install -y --no-install-recommends ca-certificates git curl jq && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
