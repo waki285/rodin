@@ -132,6 +132,7 @@ pub fn BlogPage(
     let subtitle_view = meta.subtitle.clone().unwrap_or_default();
     let crumbs = meta.breadcrumbs.clone();
     let registry = crate::app::render::breadcrumb_registry();
+    let slug_opt = current_path.strip_prefix("/blog/").map(|s| s.to_string());
     view! {
         <div class="blog-wrapper">
             <HeaderBar
@@ -186,6 +187,19 @@ pub fn BlogPage(
                     />
                 </div>
                 <article inner_html=html_content></article>
+                {slug_opt.as_ref().map(|slug| {
+                    let url = format!("https://github.com/waki285/rodin-content/blob/main/{}.typ", slug);
+                    view! {
+                        <div class="edit-proposal not-prose">
+                            <a class="edit-proposal-btn" href=url target="_blank" rel="noopener noreferrer">
+                                <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+                                    <path d="M12 .5C5.65.5.5 5.68.5 12.07c0 5.12 3.39 9.46 8.08 10.99.59.11.8-.26.8-.58 0-.29-.01-1.24-.02-2.25-3.29.71-3.98-1.58-3.98-1.58-.54-1.39-1.32-1.76-1.32-1.76-1.08-.76.08-.75.08-.75 1.19.09 1.82 1.22 1.82 1.22 1.06 1.87 2.78 1.33 3.45 1.02.11-.77.42-1.33.76-1.64-2.63-.3-5.39-1.32-5.39-5.87 0-1.3.47-2.37 1.23-3.21-.12-.31-.54-1.57.12-3.27 0 0 1.01-.33 3.3 1.25a11.5 11.5 0 0 1 6 0c2.29-1.58 3.29-1.25 3.29-1.25.67 1.7.25 2.96.12 3.27.77.84 1.23 1.91 1.23 3.21 0 4.56-2.77 5.56-5.41 5.85.43.37.81 1.11.81 2.24 0 1.62-.02 2.93-.02 3.33 0 .32.21.7.81.58 4.69-1.53 8.08-5.87 8.08-10.99C23.5 5.68 18.35.5 12 .5Z"/>
+                                </svg>
+                                <span>"GitHub で編集を提案"</span>
+                            </a>
+                        </div>
+                    }
+                })}
             </main>
         </div>
     }

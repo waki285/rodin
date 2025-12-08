@@ -135,6 +135,55 @@
     color: inherit;
   }
 
+  /* Edit proposal button */
+  .edit-proposal {
+    margin-top: 2.25rem;
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .edit-proposal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #0f172a;
+    font-weight: 500;
+    text-decoration: none;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    transition: transform 120ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  }
+
+  .edit-proposal-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    transform: translateY(-1px);
+  }
+
+  .edit-proposal-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+    border-color: #cbd5e1;
+  }
+
+  :where(.dark) {
+    .edit-proposal-btn {
+      background: #0b1220;
+      border-color: #1f2937;
+      color: #e5e7eb;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    .edit-proposal-btn:hover {
+      border-color: #334155;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+    }
+  }
+
   /* Images, video, figure */
   .prose :where(img):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
     margin-top: 2em;
