@@ -76,6 +76,7 @@ struct OpenSearchConfig {
     password: Option<String>,
 }
 
+#[inline]
 fn load_opensearch_config() -> Option<OpenSearchConfig> {
     let endpoint = env::var("OPENSEARCH_ENDPOINT").ok()?;
     let index = env::var("OPENSEARCH_INDEX").unwrap_or_else(|_| DEFAULT_OS_INDEX.to_string());
@@ -89,6 +90,7 @@ fn load_opensearch_config() -> Option<OpenSearchConfig> {
     })
 }
 
+#[inline]
 fn escape_xml(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")

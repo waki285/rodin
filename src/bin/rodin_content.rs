@@ -227,13 +227,94 @@ fn push_to_opensearch(metas: &[frontmatter::FrontMatter], cfg: &OpenSearchCfg) -
             .send();
     }
 
-    // create index if not exists
+    // create index if not exists (with Japanese analyzers)
     let create_resp = client
         .put(&index_url)
         .basic_auth_opt(cfg.username.as_ref(), cfg.password.as_ref())
         .json(&json!({
             "settings": {
-                "index": { "refresh_interval": "1s" }
+                "index": { "refresh_interval": "1s" },
+                "analysis": {
+                    "tokenizer": {
+                        "ja_kuromoji": {
+                            "type": "kuromoji_tokenizer",
+                            "mode": "search",
+                            "discard_punctuation": true
+                        }
+                    },
+                    "filter": {
+                        "ja_pos": {
+                            "type": "kuromoji_part_of_speech",
+                            "stoptags": ["助詞-格助詞-一般", "助詞-終助詞"]
+                        },
+                        "ja_baseform": { "type": "kuromoji_baseform" },
+                        "ja_stemmer": { "type": "kuromoji_stemmer", "minimum_length": 4 },
+                        "ja_stop": { "type": "stop", "stopwords": "_japanese_" },
+                        "ja_reading": { "type": "kuromoji_readingform", "use_romaji": false },
+                        "folding": { "type": "icu_folding" }
+                    },
+                    "char_filter": {
+                        "ja_normalize": { "type": "icu_normalizer" }
+                    },
+                    "analyzer": {
+                        "ja_index": {
+                            "type": "custom",
+                            "tokenizer": "ja_kuromoji",
+                            "char_filter": ["ja_normalize"],
+                            "filter": [
+                                "ja_baseform",
+                                "ja_pos",
+                                "ja_stop",
+                                "lowercase",
+                                "ja_stemmer",
+                                "ja_reading",
+                                "folding"
+                            ]
+                        },
+                        "ja_search": {
+                            "type": "custom",
+                            "tokenizer": "ja_kuromoji",
+                            "char_filter": ["ja_normalize"],
+                            "filter": [
+                                "ja_baseform",
+                                "ja_pos",
+                                "ja_stop",
+                                "lowercase",
+                                "ja_reading",
+                                "folding"
+                            ]
+                        },
+                        "ja_keyword": {
+                            "type": "custom",
+                            "tokenizer": "keyword",
+                            "char_filter": ["ja_normalize"],
+                            "filter": ["lowercase", "folding"]
+                        }
+                    }
+                }
+            },
+            "mappings": {
+                "properties": {
+                    "slug": { "type": "keyword" },
+                    "title": {
+                        "type": "text",
+                        "analyzer": "ja_index",
+                        "search_analyzer": "ja_search",
+                        "fields": { "raw": { "type": "keyword" } }
+                    },
+                    "description": { "type": "text", "analyzer": "ja_index", "search_analyzer": "ja_search" },
+                    "body": { "type": "text", "analyzer": "ja_index", "search_analyzer": "ja_search" },
+                    "tags": {
+                        "type": "text",
+                        "analyzer": "ja_index",
+                        "search_analyzer": "ja_search",
+                        "fields": { "raw": { "type": "keyword" } }
+                    },
+                    "breadcrumbs": { "type": "text", "analyzer": "ja_index", "search_analyzer": "ja_search" },
+                    "published_at": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd" },
+                    "updated_at": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd" },
+                    "url": { "type": "keyword" }
+                }
             }
         }))
         .send()?;
