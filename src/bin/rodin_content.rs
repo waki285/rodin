@@ -1,4 +1,7 @@
 use anyhow::Result;
+use regex::Regex;
+use reqwest::blocking::Client;
+use serde_json::json;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::time::Duration;
@@ -19,6 +22,17 @@ const PANDOC_FILTER: &str = "scripts/pandoc/html-to-md.lua";
 const DEFAULT_SITE_URL: &str = "https://suzuneu.com";
 const DEFAULT_SITEMAP_PATH: &str = "static/generated/sitemap.xml";
 const DEFAULT_RELOAD_URL: &str = "http://127.0.0.1:3000/__admin/reload";
+const DEFAULT_OS_INDEX: &str = "rodin-blog";
+
+#[derive(Clone)]
+struct OpenSearchCfg {
+    endpoint: String,
+    index: String,
+    username: Option<String>,
+    password: Option<String>,
+    site_url: String,
+    reset: bool,
+}
 
 fn main() -> Result<()> {
     let mut skip_markdown = false;
@@ -26,6 +40,7 @@ fn main() -> Result<()> {
     let mut do_reload = false;
     let mut reload_url: Option<String> = None;
     let mut reload_token: Option<String> = None;
+    let mut os_cfg: Option<OpenSearchCfg> = None;
 
     for arg in std::env::args().skip(1) {
         match arg.as_str() {
@@ -48,6 +63,56 @@ fn main() -> Result<()> {
             }
             _ if arg.starts_with("--site=") => {
                 site_url = arg.trim_start_matches("--site=").to_string();
+            }
+            "--opensearch" => {
+                os_cfg = Some(OpenSearchCfg {
+                    endpoint: std::env::var("OPENSEARCH_ENDPOINT")
+                        .unwrap_or_else(|_| "http://127.0.0.1:9200".to_string()),
+                    index: std::env::var("OPENSEARCH_INDEX")
+                        .unwrap_or_else(|_| DEFAULT_OS_INDEX.to_string()),
+                    username: std::env::var("OPENSEARCH_USERNAME").ok(),
+                    password: std::env::var("OPENSEARCH_PASSWORD").ok(),
+                    site_url: site_url.clone(),
+                    reset: false,
+                });
+            }
+            _ if arg.starts_with("--opensearch-endpoint=") => {
+                os_cfg
+                    .get_or_insert_with(|| OpenSearchCfg {
+                        endpoint: "http://127.0.0.1:9200".to_string(),
+                        index: DEFAULT_OS_INDEX.to_string(),
+                        username: std::env::var("OPENSEARCH_USERNAME").ok(),
+                        password: std::env::var("OPENSEARCH_PASSWORD").ok(),
+                        site_url: site_url.clone(),
+                        reset: false,
+                    })
+                    .endpoint = arg.trim_start_matches("--opensearch-endpoint=").to_string();
+            }
+            _ if arg.starts_with("--opensearch-index=") => {
+                os_cfg
+                    .get_or_insert_with(|| OpenSearchCfg {
+                        endpoint: std::env::var("OPENSEARCH_ENDPOINT")
+                            .unwrap_or_else(|_| "http://127.0.0.1:9200".to_string()),
+                        index: DEFAULT_OS_INDEX.to_string(),
+                        username: std::env::var("OPENSEARCH_USERNAME").ok(),
+                        password: std::env::var("OPENSEARCH_PASSWORD").ok(),
+                        site_url: site_url.clone(),
+                        reset: false,
+                    })
+                    .index = arg.trim_start_matches("--opensearch-index=").to_string();
+            }
+            "--opensearch-reset" => {
+                os_cfg
+                    .get_or_insert_with(|| OpenSearchCfg {
+                        endpoint: std::env::var("OPENSEARCH_ENDPOINT")
+                            .unwrap_or_else(|_| "http://127.0.0.1:9200".to_string()),
+                        index: DEFAULT_OS_INDEX.to_string(),
+                        username: std::env::var("OPENSEARCH_USERNAME").ok(),
+                        password: std::env::var("OPENSEARCH_PASSWORD").ok(),
+                        site_url: site_url.clone(),
+                        reset: false,
+                    })
+                    .reset = true;
             }
             other => {
                 eprintln!("Unknown argument: {other}");
@@ -90,6 +155,11 @@ fn main() -> Result<()> {
     let pgp_meta = posts::build_pgp(PREAMBLE_PATH, GENERATED_DIR)?;
     let pgp_ref = pgp_meta.as_ref();
     sitemap::write_sitemap(&metas, pgp_ref, &site_url, DEFAULT_SITEMAP_PATH)?;
+
+    if let Some(mut cfg) = os_cfg {
+        cfg.site_url = site_url.clone();
+        push_to_opensearch(&metas, &cfg)?;
+    }
 
     println!("done. outputs are under {GENERATED_DIR}");
 
@@ -142,8 +212,104 @@ fn trigger_reload(url: &str, token: Option<&str>) -> Result<()> {
     }
 }
 
+fn push_to_opensearch(metas: &[frontmatter::FrontMatter], cfg: &OpenSearchCfg) -> Result<()> {
+    let client = Client::builder()
+        .timeout(Duration::from_secs(10))
+        .user_agent("rodin-content/1.0")
+        .build()?;
+
+    let index_url = format!("{}/{}", cfg.endpoint.trim_end_matches('/'), cfg.index);
+
+    if cfg.reset {
+        let _ = client
+            .delete(&index_url)
+            .basic_auth_opt(cfg.username.as_ref(), cfg.password.as_ref())
+            .send();
+    }
+
+    // create index if not exists
+    let create_resp = client
+        .put(&index_url)
+        .basic_auth_opt(cfg.username.as_ref(), cfg.password.as_ref())
+        .json(&json!({
+            "settings": {
+                "index": { "refresh_interval": "1s" }
+            }
+        }))
+        .send()?;
+    if !create_resp.status().is_success() && create_resp.status().as_u16() != 400 {
+        println!(
+            "opensearch: create index returned {} (continuing)",
+            create_resp.status()
+        );
+    }
+
+    let tag_re = Regex::new("<[^>]+>").unwrap();
+    let mut bulk = String::new();
+    for m in metas {
+        let html_path = format!("static/{}", m.html);
+        let html = std::fs::read_to_string(&html_path).unwrap_or_default();
+        let plain = tag_re
+            .replace_all(&html, " ")
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        let doc = json!({
+            "slug": m.slug,
+            "title": m.title.as_deref().unwrap_or(""),
+            "description": m.meta.get("description").cloned().unwrap_or_default(),
+            "tags": m.tags,
+            "breadcrumbs": m.breadcrumbs,
+            "published_at": m.published_at,
+            "updated_at": m.updated_at,
+            "body": plain,
+            "url": format!("{}/blog/{}", cfg.site_url.trim_end_matches('/'), m.slug),
+        });
+        bulk.push_str(&format!(
+            "{{\"index\":{{\"_index\":\"{}\",\"_id\":\"{}\"}}}}\n{}\n",
+            cfg.index,
+            m.slug,
+            doc.to_string()
+        ));
+    }
+
+    let bulk_url = format!("{}/_bulk?refresh=true", index_url);
+    let mut req = client
+        .post(&bulk_url)
+        .header("content-type", "application/x-ndjson")
+        .body(bulk);
+    if let Some(u) = cfg.username.as_ref() {
+        req = req.basic_auth(u, cfg.password.as_ref());
+    }
+    let resp = req.send()?;
+    if !resp.status().is_success() {
+        anyhow::bail!("opensearch bulk failed: {}", resp.status());
+    }
+    println!(
+        "opensearch: indexed {} documents into {}",
+        metas.len(),
+        cfg.index
+    );
+    Ok(())
+}
+
+trait BasicAuthOpt: Sized {
+    fn basic_auth_opt(self, user: Option<&String>, pass: Option<&String>) -> Self;
+}
+
+impl BasicAuthOpt for reqwest::blocking::RequestBuilder {
+    fn basic_auth_opt(self, user: Option<&String>, pass: Option<&String>) -> Self {
+        if let Some(u) = user {
+            self.basic_auth(u, pass.as_ref())
+        } else {
+            self
+        }
+    }
+}
+
 fn print_help() {
-    println!("Usage: rodin-content [--skip-markdown] [--site=BASE_URL]");
+    println!("Usage: rodin-content [--skip-markdown] [--site=BASE_URL] [--opensearch ...]");
     println!(
         "  builds Typst articles in ./content into static/generated (HTML, index.json, sitemap)"
     );
@@ -153,4 +319,8 @@ fn print_help() {
     println!("  --reload        : call POST {DEFAULT_RELOAD_URL} after build");
     println!("  --reload-url=U  : override reload URL (http:// only)");
     println!("  --reload-token=T: set X-Rodin-Reload-Token header");
+    println!("  --opensearch            : push index to OpenSearch (env overrides available)");
+    println!("  --opensearch-endpoint=U : e.g. http://127.0.0.1:9200");
+    println!("  --opensearch-index=NAME : index name (default {DEFAULT_OS_INDEX})");
+    println!("  --opensearch-reset      : delete index before re-creating");
 }

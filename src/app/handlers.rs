@@ -1,3 +1,4 @@
+use anyhow::Result;
 use axum::{
     body::Body,
     extract::{ConnectInfo, Extension, Path, Query, State},
@@ -6,6 +7,9 @@ use axum::{
     response::{Html, IntoResponse, Redirect, Response},
 };
 use chrono::Utc;
+use reqwest::Client;
+use serde::Deserialize;
+use serde_json::Value;
 use std::{
     env,
     net::SocketAddr,
@@ -25,6 +29,7 @@ use crate::app::{
 const CSP_PREFIX: &str = "default-src 'self'; script-src 'self' 'nonce-";
 const CSP_SUFFIX: &str = "' static.cloudflareinsights.com platform.twitter.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-src https://platform.twitter.com https://syndication.twitter.com; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; trusted-types default rodin-spa rodin-twitter; require-trusted-types-for 'script'";
 const RSS_LIMIT: usize = 30;
+const DEFAULT_OS_INDEX: &str = "rodin-blog";
 
 pub(crate) static TRUST_PROXY_ENABLED: LazyLock<bool> = LazyLock::new(|| {
     env::var("TRUST_PROXY")
@@ -61,6 +66,27 @@ fn is_ai_crawler(headers: &HeaderMap) -> bool {
         .and_then(|v| v.to_str().ok())
         .map(|ua| AI_CRAWLER_PATTERNS.iter().any(|p| ua.contains(p)))
         .unwrap_or(false)
+}
+
+#[derive(Clone)]
+struct OpenSearchConfig {
+    endpoint: String,
+    index: String,
+    username: Option<String>,
+    password: Option<String>,
+}
+
+fn load_opensearch_config() -> Option<OpenSearchConfig> {
+    let endpoint = env::var("OPENSEARCH_ENDPOINT").ok()?;
+    let index = env::var("OPENSEARCH_INDEX").unwrap_or_else(|_| DEFAULT_OS_INDEX.to_string());
+    let username = env::var("OPENSEARCH_USERNAME").ok();
+    let password = env::var("OPENSEARCH_PASSWORD").ok();
+    Some(OpenSearchConfig {
+        endpoint,
+        index,
+        username,
+        password,
+    })
 }
 
 fn escape_xml(s: &str) -> String {
@@ -227,30 +253,24 @@ pub async fn search_handler(
     Extension(nonce): Extension<String>,
     Query(params): Query<SearchQuery>,
 ) -> Response {
-    let state = state.read().await;
+    let state_guard = state.read().await;
     let client_ip = addr.ip().to_string();
     let q_raw = params.q.unwrap_or_default();
     let q = q_raw.trim();
-    let mut hits = Vec::new();
-    if !q.is_empty() {
-        let q_lc = q.to_lowercase();
-        let q_chars: Vec<char> = q_lc.chars().collect();
-        for entry in state.search_index.iter() {
-            if entry.title_lc.contains(&q_lc) || entry.body_lc.contains(&q_lc) {
-                let snippet = build_snippet(&entry.body_chars, &entry.body_lower, &q_chars);
-                hits.push(SearchHit {
-                    title: entry.title.clone(),
-                    slug: entry.slug.clone(),
-                    snippet,
-                    published_at: entry.published_at.clone(),
-                    updated_at: entry.updated_at.clone(),
-                });
-                if hits.len() >= 30 {
-                    break;
-                }
+
+    let hits = if q.is_empty() {
+        Vec::new()
+    } else if let Some(cfg) = load_opensearch_config() {
+        match search_opensearch(&cfg, q).await {
+            Ok(res) => res,
+            Err(e) => {
+                eprintln!("opensearch search failed: {e}");
+                search_local(&state_guard.search_index, q)
             }
         }
-    }
+    } else {
+        search_local(&state_guard.search_index, q)
+    };
 
     let html = render_search_page(q.to_string(), &hits, &client_ip, &nonce);
     let mut res = Html(html).into_response();
@@ -311,19 +331,140 @@ pub async fn tag_handler(
 
 fn build_snippet(body_chars: &[char], body_lower: &[char], needle: &[char]) -> String {
     let hit = find_subsequence(body_lower, needle);
-    let (start, end) = if let Some(pos) = hit {
+    if let Some(pos) = hit {
         let start = pos.saturating_sub(40);
         let end = (pos + needle.len() + 120).min(body_chars.len());
-        (start, end)
+        let mut snippet = String::new();
+        snippet.extend(body_chars[start..pos].iter());
+        snippet.push_str("<mark>");
+        snippet.extend(body_chars[pos..pos + needle.len()].iter());
+        snippet.push_str("</mark>");
+        snippet.extend(body_chars[pos + needle.len()..end].iter());
+        if end < body_chars.len() {
+            snippet.push('…');
+        }
+        snippet
     } else {
-        (0, body_chars.len().min(160))
-    };
-
-    let mut snippet: String = body_chars[start..end].iter().collect();
-    if end < body_chars.len() {
-        snippet.push('…');
+        let end = body_chars.len().min(160);
+        let mut snippet: String = body_chars[..end].iter().collect();
+        if end < body_chars.len() {
+            snippet.push('…');
+        }
+        snippet
     }
-    snippet
+}
+
+fn search_local(index: &[SearchIndexEntry], q: &str) -> Vec<SearchHit> {
+    let q_lc = q.to_lowercase();
+    let q_chars: Vec<char> = q_lc.chars().collect();
+    let mut hits = Vec::new();
+    for entry in index.iter() {
+        if entry.title_lc.contains(&q_lc) || entry.body_lc.contains(&q_lc) {
+            let snippet = build_snippet(&entry.body_chars, &entry.body_lower, &q_chars);
+            hits.push(SearchHit {
+                title: entry.title.clone(),
+                slug: entry.slug.clone(),
+                snippet,
+                published_at: entry.published_at.clone(),
+                updated_at: entry.updated_at.clone(),
+            });
+            if hits.len() >= 30 {
+                break;
+            }
+        }
+    }
+    hits
+}
+
+async fn search_opensearch(cfg: &OpenSearchConfig, q: &str) -> Result<Vec<SearchHit>> {
+    #[derive(Deserialize)]
+    struct HitSource {
+        slug: String,
+        title: String,
+        description: Option<String>,
+        published_at: Option<String>,
+        updated_at: Option<String>,
+    }
+
+    #[derive(Deserialize)]
+    struct Hit {
+        _source: HitSource,
+        #[serde(default)]
+        highlight: Value,
+    }
+
+    #[derive(Deserialize)]
+    struct SearchResponse {
+        hits: SearchHits,
+    }
+
+    #[derive(Deserialize)]
+    struct SearchHits {
+        hits: Vec<Hit>,
+    }
+
+    let client = Client::builder().user_agent("rodin-search/1.0").build()?;
+
+    let url = format!(
+        "{}/{}/_search",
+        cfg.endpoint.trim_end_matches('/'),
+        cfg.index
+    );
+
+    let body = serde_json::json!({
+        "size": 20,
+        "query": {
+            "multi_match": {
+                "query": q,
+                "fields": ["title^3", "description^2", "body", "tags^2", "breadcrumbs^1.5"]
+            }
+        },
+        "highlight": {
+            "fields": {
+                "body": { "fragment_size": 120, "number_of_fragments": 1 }
+            }
+        }
+    });
+
+    let mut req = client.post(url).json(&body);
+    if let Some(user) = cfg.username.as_ref() {
+        req = req.basic_auth(user, cfg.password.as_ref());
+    }
+
+    let resp = req.send().await?;
+    if !resp.status().is_success() {
+        anyhow::bail!("opensearch status {}", resp.status());
+    }
+    let parsed: SearchResponse = resp.json().await?;
+
+    let mut results = Vec::new();
+    for hit in parsed.hits.hits.into_iter() {
+        let src = hit._source;
+        let snippet = hit
+            .highlight
+            .get("body")
+            .and_then(|v| v.get(0))
+            .and_then(|v| v.as_str())
+            .map(|s| {
+                s.replace("<em>", "<mark>")
+                    .replace("</em>", "</mark>")
+                    .replace('&', "&amp;")
+                    .replace('<', "&lt;")
+                    .replace("&lt;mark>", "<mark>")
+                    .replace("&lt;/mark>", "</mark>")
+            })
+            .or(src.description.clone())
+            .unwrap_or_else(|| src.title.clone());
+        results.push(SearchHit {
+            title: src.title,
+            slug: src.slug,
+            snippet,
+            published_at: src.published_at,
+            updated_at: src.updated_at,
+        });
+    }
+
+    Ok(results)
 }
 
 fn find_subsequence(haystack: &[char], needle: &[char]) -> Option<usize> {

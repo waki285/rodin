@@ -61,7 +61,7 @@ pub fn SearchPage(
                                                         slug=None
                                                     />
                                                 </div>
-                                                <p>{hit.snippet}</p>
+                                                <p inner_html=hit.snippet.clone()></p>
                                             </li>
                                         }
                                     })

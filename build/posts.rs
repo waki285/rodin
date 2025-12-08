@@ -281,10 +281,6 @@ fn compile_typst(
     binaries: &[(String, Vec<u8>)],
 ) -> Result<String> {
     let combined = format!("{preamble}\n{typst_source}");
-    dbg!(
-        "Binary assets loaded:",
-        binaries.iter().map(|(p, _)| p).collect::<Vec<_>>()
-    );
     let engine = TypstEngine::builder()
         .search_fonts_with(TypstKitFontOptions::default())
         .with_static_file_resolver(
@@ -299,6 +295,11 @@ fn compile_typst(
     let result = engine.compile::<HtmlDocument>();
     if !result.warnings.is_empty() {
         for w in &result.warnings {
+            if w.message
+                .contains("html export is under active development")
+            {
+                continue;
+            }
             println!("cargo:warning=Typst warning: {}", w.message);
         }
     }
