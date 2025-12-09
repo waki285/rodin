@@ -1,6 +1,7 @@
 use crate::frontmatter::FrontMatter;
 use anyhow::Result;
 use std::{
+    env,
     fs,
     path::{Path, PathBuf},
     process::Command,
@@ -11,10 +12,13 @@ pub fn build_markdown(
     generated_md_dir: &str,
     pandoc_filter: &str,
 ) -> Result<bool> {
-    if !pandoc_available()? {
-        println!("cargo:warning=pandoc not found; skipping markdown generation");
-        return Ok(false);
-    }
+    let pandoc = match find_pandoc()? {
+        Some(path) => path,
+        None => {
+            println!("cargo:warning=pandoc not found; skipping markdown generation");
+            return Ok(false);
+        }
+    };
 
     let out_dir = PathBuf::from(generated_md_dir);
     fs::create_dir_all(&out_dir)?;
@@ -28,7 +32,7 @@ pub fn build_markdown(
         let md_rel = format!("generated/md/{slug}.md");
         let md_path = PathBuf::from("static").join(&md_rel);
 
-        if let Err(e) = run_pandoc_to_markdown(&html_path, &md_path, pandoc_filter) {
+        if let Err(e) = run_pandoc_to_markdown(&pandoc, &html_path, &md_path, pandoc_filter) {
             println!("cargo:warning=pandoc failed for {slug}: {e}");
             all_ok = false;
             break;
@@ -54,7 +58,12 @@ pub fn write_index(metas: &[FrontMatter], generated_dir: &str) -> Result<()> {
     Ok(())
 }
 
-fn run_pandoc_to_markdown(html_path: &Path, md_path: &Path, pandoc_filter: &str) -> Result<()> {
+fn run_pandoc_to_markdown(
+    pandoc: &str,
+    html_path: &Path,
+    md_path: &Path,
+    pandoc_filter: &str,
+) -> Result<()> {
     if !html_path.exists() {
         return Err(anyhow::anyhow!(
             "source HTML not found: {}",
@@ -65,7 +74,7 @@ fn run_pandoc_to_markdown(html_path: &Path, md_path: &Path, pandoc_filter: &str)
         fs::create_dir_all(parent)?;
     }
 
-    let status = Command::new("pandoc")
+    let status = Command::new(pandoc)
         .args([
             "-f",
             "html",
@@ -91,10 +100,28 @@ fn run_pandoc_to_markdown(html_path: &Path, md_path: &Path, pandoc_filter: &str)
     Ok(())
 }
 
-fn pandoc_available() -> Result<bool> {
-    let status = Command::new("pandoc").arg("--version").status();
-    match status {
-        Ok(s) => Ok(s.success()),
-        Err(_) => Ok(false),
+/// Locate pandoc in a few common places, including an override via PANDOC_BIN.
+fn find_pandoc() -> Result<Option<String>> {
+    let mut candidates: Vec<String> = Vec::new();
+    if let Ok(p) = env::var("PANDOC_BIN") {
+        if !p.trim().is_empty() {
+            candidates.push(p);
+        }
     }
+    // PATH fallback
+    candidates.push("pandoc".to_string());
+    // Typical Homebrew / system paths (in case PATH is restricted)
+    candidates.push("/opt/homebrew/bin/pandoc".to_string());
+    candidates.push("/usr/local/bin/pandoc".to_string());
+    candidates.push("/usr/bin/pandoc".to_string());
+
+    for cand in candidates {
+        let status = Command::new(&cand).arg("--version").status();
+        if let Ok(s) = status {
+            if s.success() {
+                return Ok(Some(cand));
+            }
+        }
+    }
+    Ok(None)
 }
