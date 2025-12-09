@@ -175,8 +175,7 @@
 
       // Re-run initialization scripts
       reinitialize();
-
-      // Scroll to top (or hash)
+      // Scroll to top (or hash). Restoration scroll will override later if provided.
       const hash = new URL(url, location.origin).hash;
       if (hash) {
         const target = document.querySelector(hash);
@@ -188,14 +187,22 @@
       window.scrollTo(0, 0);
     };
 
+    const saveScrollPosition = () => {
+      const current = history.state || {};
+      history.replaceState({ ...current, scrollY: window.scrollY }, "", location.href);
+    };
+
     // Navigate to a new URL
     // pushState: true = normal navigation, false = popstate (back/forward)
-    const navigate = async (url, pushState = true) => {
+    const navigate = async (url, pushState = true, restoreScroll = null) => {
       if (isNavigating) return;
       // Only skip duplicate for normal navigation, not for popstate
       if (pushState && url === location.href) return;
 
       isNavigating = true;
+      if (pushState) {
+        saveScrollPosition();
+      }
 
       try {
         const entry = await fetchPage(url);
@@ -210,7 +217,12 @@
         }
 
         if (pushState) {
-          history.pushState({ url }, "", url);
+          history.pushState({ url, scrollY: 0 }, "", url);
+        }
+
+        const targetY = restoreScroll ?? (pushState ? 0 : null);
+        if (targetY !== null && targetY !== undefined) {
+          window.scrollTo({ top: targetY, behavior: "instant" in window ? "instant" : "auto" });
         }
       } catch (err) {
         // Fallback to normal navigation on error
@@ -246,7 +258,8 @@
     // Handle popstate (back/forward)
     const handlePopState = (e) => {
       const url = e.state?.url || location.href;
-      navigate(url, false);
+      const scrollY = e.state?.scrollY ?? 0;
+      navigate(url, false, scrollY);
     };
 
     // Prefetch on hover/focus
@@ -266,7 +279,8 @@
     // Initialize router
     const init = () => {
       // Store initial state
-      history.replaceState({ url: location.href }, "", location.href);
+      history.scrollRestoration = "manual";
+      history.replaceState({ url: location.href, scrollY: window.scrollY }, "", location.href);
 
       // Event listeners
       document.addEventListener("click", handleClick);
