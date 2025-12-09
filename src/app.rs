@@ -1,4 +1,5 @@
 mod handlers;
+mod admin;
 pub mod render;
 mod state;
 
@@ -73,6 +74,20 @@ pub async fn run() -> anyhow::Result<()> {
         .route("/tags/{tag}", get(handlers::tag_handler))
         .route("/search", get(handlers::search_handler))
         .route("/rss.xml", get(handlers::rss_handler))
+        .route("/__admin", get(admin::admin_page_handler))
+        .route("/__admin/status", get(admin::admin_status_handler))
+        .route(
+            "/__admin/passkey/register/options",
+            get(admin::admin_register_options_handler).post(admin::admin_register_options_handler),
+        )
+        .route("/__admin/passkey/register/finish", post(admin::admin_register_finish_handler))
+        .route(
+            "/__admin/passkey/login/options",
+            get(admin::admin_login_options_handler).post(admin::admin_login_options_handler),
+        )
+        .route("/__admin/passkey/login/finish", post(admin::admin_login_finish_handler))
+        .route("/__admin/api/run", post(admin::admin_run_handler))
+        .route("/__admin/api/reload", post(admin::admin_reload_handler))
         .route("/__admin/reload", post(handlers::reload_handler))
         .route_service(
             "/sitemap.xml",

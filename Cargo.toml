@@ -33,6 +33,13 @@ typst-html = "0.14.1"
 typst-library = "0.14.1"
 urlencoding = "2.1"
 reqwest = { version = "0.12.25", default-features = false, features = ["charset", "system-proxy", "json", "rustls-tls", "blocking"] }
+webauthn-rs = "0.5"
+base64 = "0.22"
+hmac = "0.12"
+sha2 = "0.10"
+url = "2.5"
+uuid = { version = "1.10", features = ["v4"] }
+dotenvy = "0.15.7"
 
 [build-dependencies]
 anyhow = "1.0.100"

@@ -181,6 +181,16 @@ pub fn minify_assets() -> Result<()> {
         }),
     )?;
 
+    // Step 5: Admin JS (no dependency replacements today)
+    process_js_file(
+        &PathBuf::from("static/admin.js"),
+        &out_dir,
+        "admin",
+        "/assets/build/admin.js",
+        &mut manifest,
+        None::<fn(String) -> String>,
+    )?;
+
     // Step 5: Process twitter.js (lazy loader for embeds)
     process_js_file(
         &PathBuf::from("static/twitter.js"),
