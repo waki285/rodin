@@ -7,12 +7,7 @@ use axum::{
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use hmac::{Hmac, Mac};
 use rand::Rng;
-use std::{
-    collections::HashMap,
-    env,
-    net::SocketAddr,
-    sync::LazyLock,
-};
+use std::{collections::HashMap, env, net::SocketAddr, sync::LazyLock};
 use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
 use webauthn_rs::prelude::*;
@@ -210,7 +205,9 @@ fn admin_page_html(_client_ip: &str, nonce: &str) -> String {
     let opts = HtmlOptions {
         meta: Some(meta),
         head_links: vec![format!(r#"<link rel="stylesheet" href="{css}" />"#)],
-        head_scripts: vec![format!(r#"<script nonce="{nonce}" src="{js}" defer></script>"#)],
+        head_scripts: vec![format!(
+            r#"<script nonce="{nonce}" src="{js}" defer></script>"#
+        )],
         ..Default::default()
     };
 
@@ -227,14 +224,20 @@ fn admin_page_html(_client_ip: &str, nonce: &str) -> String {
   <section id="login-panel" class="card">
     <h2>ログイン</h2>
     <p class="muted">パスキーでサインインします。</p>
-    <button id="login-btn">パスキーでログイン</button>
+    <button id="login-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        パスキーでログイン
+    </button>
     <div class="small muted" id="login-hint"></div>
   </section>
 
   <section id="register-panel" class="card hidden">
     <h2>初回セットアップ（登録）</h2>
     <p class="muted">まだサーバーにパスキーが登録されていない場合に一度だけ実行します。完了後に表示される値を環境変数 <code>{ADMIN_PASSKEY_ENV}</code> にセットし、サービスを再起動してください。</p>
-    <button id="register-btn">パスキーを登録</button>
+    <button id="register-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        パスキーを登録
+    </button>
     <pre id="register-output" class="mono"></pre>
   </section>
 
@@ -246,12 +249,18 @@ fn admin_page_html(_client_ip: &str, nonce: &str) -> String {
         <p class="muted">Typst→HTML生成、Markdown生成、サイトマップ更新、OpenSearch への再投入をまとめて実行します。</p>
         <label><input type="checkbox" id="reset-os" /> インデックスを削除してから再作成</label><br />
         <label><input type="checkbox" id="skip-md" /> Markdown 生成をスキップ</label>
-        <button id="run-build">実行（リビルド &amp; インデックス）</button>
+        <button id="run-build">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            実行（リビルド &amp; インデックス）
+        </button>
       </div>
       <div>
         <h3>ライブリロード</h3>
         <p class="muted">静的生成済みの内容をアプリに再読み込みします。</p>
-        <button id="reload-btn">状態をリロード</button>
+        <button id="reload-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            状態をリロード
+        </button>
       </div>
     </div>
     <pre id="log" class="mono"></pre>
@@ -277,15 +286,23 @@ pub async fn admin_page_handler(
     let client_ip = super::get_client_ip(&headers, &addr);
     let html = inject_runtime_tokens(&admin_page_html(&client_ip, &nonce), &client_ip, &nonce);
     let mut res = Html(html).into_response();
-    res.headers_mut()
-        .insert(axum::http::header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    res.headers_mut().insert(
+        axum::http::header::CACHE_CONTROL,
+        HeaderValue::from_static("no-store"),
+    );
     res
 }
 
 pub async fn admin_status_handler(headers: HeaderMap) -> impl IntoResponse {
     let logged_in = verify_session(&headers);
     let has_cred = ADMIN_AUTH.passkey.read().await.is_some();
-    (StatusCode::OK, axum::Json(AdminStatus { logged_in, has_credential: has_cred }))
+    (
+        StatusCode::OK,
+        axum::Json(AdminStatus {
+            logged_in,
+            has_credential: has_cred,
+        }),
+    )
 }
 
 #[derive(serde::Serialize)]
@@ -294,7 +311,9 @@ struct RegisterOptionsResponse {
     challenge_b64: String,
 }
 
-pub async fn admin_register_options_handler(headers: HeaderMap) -> Result<impl IntoResponse, StatusCode> {
+pub async fn admin_register_options_handler(
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, StatusCode> {
     if ADMIN_AUTH.passkey.read().await.is_some() {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -317,7 +336,10 @@ pub async fn admin_register_options_handler(headers: HeaderMap) -> Result<impl I
         guard.insert(challenge_b64.clone(), (state, is_local));
     }
     let challenge_b64 = URL_SAFE_NO_PAD.encode(challenge.as_ref());
-    Ok(axum::Json(RegisterOptionsResponse { options, challenge_b64 }))
+    Ok(axum::Json(RegisterOptionsResponse {
+        options,
+        challenge_b64,
+    }))
 }
 
 #[derive(serde::Deserialize)]
@@ -358,7 +380,11 @@ pub async fn admin_register_finish_handler(
     };
     let stored = StoredPasskey {
         passkey: passkey.clone(),
-        rp_id: if is_local { "localhost".to_string() } else { "suzuneu.com".to_string() },
+        rp_id: if is_local {
+            "localhost".to_string()
+        } else {
+            "suzuneu.com".to_string()
+        },
     };
     {
         let mut guard = ADMIN_AUTH.passkey.write().await;
@@ -374,7 +400,9 @@ struct LoginOptionsResp {
     challenge_b64: String,
 }
 
-pub async fn admin_login_options_handler(headers: HeaderMap) -> Result<impl IntoResponse, StatusCode> {
+pub async fn admin_login_options_handler(
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, StatusCode> {
     let passkey = match ADMIN_AUTH.passkey.read().await.clone() {
         Some(p) => p,
         None => return Err(StatusCode::BAD_REQUEST),
@@ -398,7 +426,10 @@ pub async fn admin_login_options_handler(headers: HeaderMap) -> Result<impl Into
         guard.insert(challenge_b64.clone(), (state, is_local));
     }
     let challenge_b64 = URL_SAFE_NO_PAD.encode(challenge.as_ref());
-    Ok(axum::Json(LoginOptionsResp { options, challenge_b64 }))
+    Ok(axum::Json(LoginOptionsResp {
+        options,
+        challenge_b64,
+    }))
 }
 
 #[derive(serde::Deserialize)]
@@ -455,8 +486,10 @@ pub async fn admin_login_finish_handler(
     let cookie = issue_session_cookie(host);
     let mut res = Response::new(axum::body::Body::empty());
     *res.status_mut() = StatusCode::OK;
-    res.headers_mut()
-        .insert(axum::http::header::SET_COOKIE, HeaderValue::from_str(&cookie).unwrap());
+    res.headers_mut().insert(
+        axum::http::header::SET_COOKIE,
+        HeaderValue::from_str(&cookie).unwrap(),
+    );
     res
 }
 
@@ -481,7 +514,11 @@ pub async fn admin_run_handler(
         return Err(StatusCode::UNAUTHORIZED);
     }
     let res = match tokio::task::spawn_blocking(move || {
-        admin_tasks::run_build_and_index(payload.opensearch, payload.reset_os, payload.skip_markdown)
+        admin_tasks::run_build_and_index(
+            payload.opensearch,
+            payload.reset_os,
+            payload.skip_markdown,
+        )
     })
     .await
     {
