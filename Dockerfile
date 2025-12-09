@@ -35,6 +35,7 @@ FROM builder-base AS planner
 COPY Cargo.toml Cargo.lock build.rs ./ 
 COPY src src
 COPY build build
+COPY scripts scripts
 COPY content content
 COPY static static
 RUN cargo chef prepare --recipe-path recipe.json
@@ -58,6 +59,7 @@ RUN pnpm install --frozen-lockfile
 
 # Copy full source
 COPY . .
+COPY scripts scripts
 
 # Build (build.rs runs Esbuild/Typst/pandoc as needed)
 RUN --mount=type=cache,target=/sccache,sharing=locked cargo build --release
@@ -76,6 +78,7 @@ WORKDIR /app
 COPY --from=builder /app/target/release/rodin /app/rodin
 COPY --from=builder /app/target/release/rodin-content /app/rodin-content
 COPY --from=builder /app/static /app/static
+COPY --from=builder /app/scripts /app/scripts
 
 RUN git clone --depth=1 -b main https://github.com/waki285/rodin-content.git content
 
