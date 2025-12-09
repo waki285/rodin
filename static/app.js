@@ -37,6 +37,23 @@
     const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
     const prefetching = new Set();
     let isNavigating = false;
+    const scrollPositions = new Map(); // key -> { x, y }
+
+    // Disable browser's default scroll restoration
+    if ("scrollRestoration" in history) {
+      history.scrollRestoration = "manual";
+    }
+
+    // Generate a unique key for current history entry
+    const getScrollKey = () => {
+      return history.state?.scrollKey || location.href;
+    };
+
+    // Save current scroll position
+    const saveScrollPosition = () => {
+      const key = getScrollKey();
+      scrollPositions.set(key, { x: window.scrollX, y: window.scrollY });
+    };
 
     // Check if URL is internal and should be handled by router
     const isInternalLink = (url) => {
@@ -160,7 +177,7 @@
     };
 
     // Update DOM with new page content
-    const updateDOM = async (entry, url) => {
+    const updateDOM = async (entry, url, scrollPos = null) => {
       // Ensure all stylesheets are loaded first
       await ensureStylesheets(entry.stylesheets);
 
@@ -175,7 +192,14 @@
 
       // Re-run initialization scripts
       reinitialize();
-      // Scroll to top (or hash). Restoration scroll will override later if provided.
+
+      // Restore scroll position for back/forward navigation
+      if (scrollPos) {
+        window.scrollTo(scrollPos.x, scrollPos.y);
+        return;
+      }
+
+      // Scroll to hash or top for new navigation
       const hash = new URL(url, location.origin).hash;
       if (hash) {
         const target = document.querySelector(hash);
@@ -187,22 +211,19 @@
       window.scrollTo(0, 0);
     };
 
-    const saveScrollPosition = () => {
-      const current = history.state || {};
-      history.replaceState({ ...current, scrollY: window.scrollY }, "", location.href);
-    };
-
     // Navigate to a new URL
     // pushState: true = normal navigation, false = popstate (back/forward)
-    const navigate = async (url, pushState = true, restoreScroll = null) => {
+    const navigate = async (url, pushState = true, scrollPos = null) => {
       if (isNavigating) return;
       // Only skip duplicate for normal navigation, not for popstate
       if (pushState && url === location.href) return;
 
-      isNavigating = true;
+      // Save scroll position before navigating away
       if (pushState) {
         saveScrollPosition();
       }
+
+      isNavigating = true;
 
       try {
         const entry = await fetchPage(url);
@@ -210,19 +231,16 @@
         // Use View Transitions API if available
         if (document.startViewTransition) {
           await document.startViewTransition(async () => {
-            await updateDOM(entry, url);
+            await updateDOM(entry, url, scrollPos);
           }).finished;
         } else {
-          await updateDOM(entry, url);
+          await updateDOM(entry, url, scrollPos);
         }
 
         if (pushState) {
-          history.pushState({ url, scrollY: 0 }, "", url);
-        }
-
-        const targetY = restoreScroll ?? (pushState ? 0 : null);
-        if (targetY !== null && targetY !== undefined) {
-          window.scrollTo({ top: targetY, behavior: "instant" in window ? "instant" : "auto" });
+          // Create a unique scroll key for the new page
+          const scrollKey = url + "-" + Date.now();
+          history.pushState({ url, scrollKey }, "", url);
         }
       } catch (err) {
         // Fallback to normal navigation on error
@@ -257,9 +275,14 @@
 
     // Handle popstate (back/forward)
     const handlePopState = (e) => {
+      // Save current scroll position before navigating
+      saveScrollPosition();
+      
       const url = e.state?.url || location.href;
-      const scrollY = e.state?.scrollY ?? 0;
-      navigate(url, false, scrollY);
+      const scrollKey = e.state?.scrollKey || url;
+      const scrollPos = scrollPositions.get(scrollKey) || null;
+      
+      navigate(url, false, scrollPos);
     };
 
     // Prefetch on hover/focus
@@ -278,13 +301,23 @@
 
     // Initialize router
     const init = () => {
-      // Store initial state
-      history.scrollRestoration = "manual";
-      history.replaceState({ url: location.href, scrollY: window.scrollY }, "", location.href);
+      // Store initial state with scroll key
+      const initialScrollKey = location.href + "-" + Date.now();
+      history.replaceState({ url: location.href, scrollKey: initialScrollKey }, "", location.href);
 
       // Event listeners
       document.addEventListener("click", handleClick);
       window.addEventListener("popstate", handlePopState);
+
+      // Save scroll position on scroll (throttled)
+      let scrollTimeout;
+      window.addEventListener("scroll", () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(saveScrollPosition, 100);
+      }, { passive: true });
+
+      // Save scroll position before page unload
+      window.addEventListener("beforeunload", saveScrollPosition);
 
       // Prefetch on hover (with debounce)
       let hoverTimeout;
