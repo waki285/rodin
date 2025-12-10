@@ -1,5 +1,5 @@
-mod handlers;
 mod admin;
+mod handlers;
 pub mod render;
 mod state;
 
@@ -80,12 +80,18 @@ pub async fn run() -> anyhow::Result<()> {
             "/__admin/passkey/register/options",
             get(admin::admin_register_options_handler).post(admin::admin_register_options_handler),
         )
-        .route("/__admin/passkey/register/finish", post(admin::admin_register_finish_handler))
+        .route(
+            "/__admin/passkey/register/finish",
+            post(admin::admin_register_finish_handler),
+        )
         .route(
             "/__admin/passkey/login/options",
             get(admin::admin_login_options_handler).post(admin::admin_login_options_handler),
         )
-        .route("/__admin/passkey/login/finish", post(admin::admin_login_finish_handler))
+        .route(
+            "/__admin/passkey/login/finish",
+            post(admin::admin_login_finish_handler),
+        )
         .route("/__admin/api/run", post(admin::admin_run_handler))
         .route("/__admin/api/reload", post(admin::admin_reload_handler))
         .route("/__admin/reload", post(handlers::reload_handler))
@@ -93,6 +99,7 @@ pub async fn run() -> anyhow::Result<()> {
             "/sitemap.xml",
             ServeFile::new("static/generated/sitemap.xml"),
         )
+        .nest_service("/assets/og", ServeDir::new("static/generated/og"))
         .nest_service("/assets", ServeDir::new("static"))
         .fallback_service(get_service(static_root))
         .with_state(app_state);

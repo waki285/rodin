@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use image::ImageEncoder;
 use itertools::Itertools;
 #[cfg(not(debug_assertions))]
 use minify_html::{minify, Cfg as HtmlMinCfg};
@@ -8,6 +9,7 @@ use std::{collections::HashMap, fs, path::PathBuf, sync::LazyLock};
 use typst_as_lib::{typst_kit_options::TypstKitFontOptions, TypstEngine};
 use typst_html::HtmlDocument;
 use typst_library::diag::SourceDiagnostic;
+use typst_render::render;
 
 use crate::frontmatter::FrontMatter;
 
@@ -21,8 +23,13 @@ static TAG_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new("<[^>]+>").expect("
 pub fn build_posts(preamble_path: &str, generated_dir: &str) -> Result<Vec<FrontMatter>> {
     let out_dir = PathBuf::from(generated_dir);
     fs::create_dir_all(&out_dir)?;
+    // OG画像の出力ディレクトリ作成
+    let og_dir = out_dir.join("og");
+    fs::create_dir_all(&og_dir)?;
+
     let binaries = load_binary_assets()?;
     let preamble = load_preamble(preamble_path);
+    let og_template = load_preamble("static/og_template.typ");
 
     // エントリを収集
     let entries: Vec<_> = fs::read_dir("content")?
@@ -55,9 +62,44 @@ pub fn build_posts(preamble_path: &str, generated_dir: &str) -> Result<Vec<Front
             let html_path = out_dir.join(format!("{slug}.html"));
             fs::write(&html_path, maybe_minify_html(html.clone()))?;
 
+            // OG画像生成
+            if let Some(title) = &meta.title {
+                let date = meta.published_at.as_deref().unwrap_or("");
+                let updated = meta.updated_at.as_deref().unwrap_or("");
+                
+                let og_source = format!(
+                    "#show: generate_og.with(title: \"{}\", author: \"{}\", date: \"{}\", updated: \"{}\")",
+                    title.replace('"', "\\\""),
+                    "すずねーう",
+                    date,
+                    updated
+                );
+
+                match generate_og_image(&og_template, &og_source, &binaries) {
+                    Ok(png_data) => {
+                        let og_path = og_dir.join(format!("{slug}.png"));
+                        fs::write(&og_path, png_data)?;
+                    }
+                    Err(e) => {
+                        println!("cargo:warning=Failed to generate OG image for {slug}: {e}");
+                    }
+                }
+            }
+
             let mut meta_out = meta.clone();
             meta_out.html = format!("generated/{slug}.html");
             meta_out.reading_minutes = Some(estimate_reading_minutes(&html));
+
+            // OGメタデータ追加
+            meta_out.meta.insert(
+                "og:image".to_string(),
+                format!("https://suzuneu.com/assets/og/{slug}.png"),
+            );
+            meta_out.meta.insert(
+                "twitter:card".to_string(),
+                "summary_large_image".to_string(),
+            );
+
             Ok(meta_out)
         })
         .collect();
@@ -70,6 +112,58 @@ pub fn build_posts(preamble_path: &str, generated_dir: &str) -> Result<Vec<Front
 
     println!("cargo:warning=generated {} posts", index.len());
     Ok(index)
+}
+
+fn generate_og_image(
+    template: &str,
+    source: &str,
+    binaries: &[(String, Vec<u8>)],
+) -> Result<Vec<u8>> {
+    let combined = format!("{template}\n{source}");
+    // Load custom font
+    let font_path = PathBuf::from("static/fonts/IBMPlexSansJP-Bold.ttf");
+    let font_data: Vec<typst::foundations::Bytes> = if font_path.exists() {
+        vec![typst::foundations::Bytes::new(std::fs::read(&font_path).unwrap())]
+    } else {
+        vec![]
+    };
+
+    let engine = TypstEngine::builder()
+        .fonts(font_data)
+        .search_fonts_with(TypstKitFontOptions::default())
+        .with_static_file_resolver(
+            binaries
+                .iter()
+                .map(|(p, b)| (p.as_str(), b.as_slice()))
+                .collect::<Vec<_>>(),
+        )
+        .main_file(combined)
+        .build();
+
+    let doc = engine
+        .compile::<typst::layout::PagedDocument>()
+        .output
+        .map_err(|e| anyhow!("Typst compile error: {e:?}"))?;
+
+    let page = doc
+        .pages
+        .first()
+        .ok_or_else(|| anyhow!("No pages generated"))?;
+
+    // 2.0 scale for high DPI
+    let pixmap = render(page, 2.0);
+
+    let mut png_data = Vec::new();
+    // Use fast encoder
+    let enc = image::codecs::png::PngEncoder::new(&mut png_data);
+    enc.write_image(
+        pixmap.data(),
+        pixmap.width(),
+        pixmap.height(),
+        image::ExtendedColorType::Rgba8,
+    )?;
+
+    Ok(png_data)
 }
 
 pub fn build_home(preamble_path: &str, generated_dir: &str) -> Result<()> {
@@ -396,6 +490,8 @@ fn load_binary_assets() -> Result<Vec<(String, Vec<u8>)>> {
     ];
 
     bins.extend(other_assets);
+
+
 
     let gen_index = PathBuf::from("static/generated/index.json");
     if gen_index.exists() {
