@@ -53,12 +53,15 @@ static ADMIN_AUTH: LazyLock<AdminAuth> = LazyLock::new(|| {
 });
 
 fn build_admin_auth() -> anyhow::Result<AdminAuth> {
-    let prod_origin = url::Url::parse("https://suzuneu.com")?;
+    let prod_origin = url::Url::parse(crate::constants::SITE_URL)?;
     let local_origin = url::Url::parse("http://localhost:3000")?;
 
-    let wa_prod = WebauthnBuilder::new("suzuneu.com", &prod_origin)?
-        .rp_name("rodin-admin")
-        .build()?;
+    let wa_prod = WebauthnBuilder::new(
+        crate::constants::SITE_URL.trim_start_matches("https://"),
+        &prod_origin,
+    )?
+    .rp_name("rodin-admin")
+    .build()?;
     let wa_local = WebauthnBuilder::new("localhost", &local_origin)?
         .rp_name("rodin-admin-local")
         .build()?;
@@ -320,10 +323,10 @@ pub async fn admin_register_options_handler(
     let host = headers
         .get("host")
         .and_then(|v| v.to_str().ok())
-        .unwrap_or("suzuneu.com")
+        .unwrap_or(crate::constants::SITE_URL.trim_start_matches("https://"))
         .split(':')
         .next()
-        .unwrap_or("suzuneu.com");
+        .unwrap_or(crate::constants::SITE_URL.trim_start_matches("https://"));
     let (wa, is_local) = select_webauthn(&ADMIN_AUTH, host);
     let user_id = Uuid::new_v4();
     let (options, state) = wa
@@ -383,7 +386,9 @@ pub async fn admin_register_finish_handler(
         rp_id: if is_local {
             "localhost".to_string()
         } else {
-            "suzuneu.com".to_string()
+            crate::constants::SITE_URL
+                .trim_start_matches("https://")
+                .to_string()
         },
     };
     {

@@ -733,7 +733,8 @@ pub async fn security_middleware(mut req: Request<Body>, next: Next) -> Response
     );
     res_headers.insert(
         "For-Inspectors",
-        HeaderValue::from_static("Follow https://x.com/suzuneu_discord please!"),
+        HeaderValue::from_str(&format!("Follow {} please!", crate::constants::TWITTER_URL))
+            .unwrap(),
     );
     res_headers.insert("For-Scrapers", HeaderValue::from_static("You can use /blog/[slug].typ to get the raw Typst source. Please be kind to the server!"));
 

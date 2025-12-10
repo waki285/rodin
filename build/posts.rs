@@ -79,7 +79,7 @@ pub fn build_posts(preamble_path: &str, generated_dir: &str) -> Result<Vec<Front
                 let og_source = format!(
                     "#show: generate_og.with(title: \"{}\", author: \"{}\", date: \"{}\", updated: \"{}\", description: \"{}\")",
                     title.replace('"', "\\\""),
-                    "すずねーう",
+                    crate::constants::AUTHOR_NAME,
                     date,
                     updated,
                     description.replace('"', "\\\"")
@@ -103,7 +103,7 @@ pub fn build_posts(preamble_path: &str, generated_dir: &str) -> Result<Vec<Front
             // OGメタデータ追加
             meta_out.meta.insert(
                 "og:image".to_string(),
-                format!("https://suzuneu.com/assets/og/{slug}.png"),
+                format!("{}{}/assets/og/{slug}.png", crate::constants::SITE_URL, ""),
             );
             meta_out.meta.insert(
                 "twitter:card".to_string(),
@@ -264,7 +264,7 @@ pub fn build_pgp(preamble_path: &str, generated_dir: &str) -> Result<Option<Fron
     meta.slug = "pgp".to_string();
     meta.meta
         .entry("link:canonical".to_string())
-        .or_insert_with(|| "https://suzuneu.com/pgp".to_string());
+        .or_insert_with(|| format!("{}/pgp", crate::constants::SITE_URL));
 
     let meta_path = out_dir.join("pgp_meta.json");
     fs::write(&meta_path, serde_json::to_string_pretty(&meta)?)?;
@@ -343,19 +343,18 @@ fn parse_front_matter(slug: &str, source: &str) -> (FrontMatter, String) {
             .or_insert_with(|| title.clone());
     }
 
-    // デフォルト.
-    meta_map
+     meta_map
         .entry("author".to_string())
-        .or_insert_with(|| "すずねーう".to_string());
+        .or_insert_with(|| crate::constants::AUTHOR_NAME.to_string());
     meta_map
         .entry("link:author".to_string())
-        .or_insert_with(|| "https://twitter.com/suzuneu_discord".to_string());
+        .or_insert_with(|| crate::constants::TWITTER_URL.to_string());
     meta_map
         .entry("referrer".to_string())
         .or_insert_with(|| "strict-origin-when-cross-origin".to_string());
     meta_map
         .entry("og:site_name".to_string())
-        .or_insert_with(|| "すずねーうのウェブサイト".to_string());
+        .or_insert_with(|| crate::constants::SITE_NAME.to_string());
     meta_map
         .entry("og:locale".to_string())
         .or_insert_with(|| "ja_JP".to_string());

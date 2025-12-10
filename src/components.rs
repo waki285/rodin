@@ -18,7 +18,7 @@ pub fn BlogListPage(
     view! {
         <div class="blog-wrapper">
             <HeaderBar
-                title="すずねーう".to_string()
+                title=crate::constants::AUTHOR_NAME.to_string()
                 subtitle=format!("{client_ip}")
                 current_path="/blog".to_string()
             />
@@ -128,7 +128,7 @@ pub fn BlogPage(
     let article_title = meta
         .title
         .clone()
-        .unwrap_or_else(|| "すずねーう".to_string());
+        .unwrap_or_else(|| crate::constants::AUTHOR_NAME.to_string());
     let subtitle_view = meta.subtitle.clone().unwrap_or_default();
     let crumbs = meta.breadcrumbs.clone();
     let registry = crate::app::render::breadcrumb_registry();
@@ -136,7 +136,7 @@ pub fn BlogPage(
     view! {
         <div class="blog-wrapper">
             <HeaderBar
-                title="すずねーう".to_string()
+                title=crate::constants::AUTHOR_NAME.to_string()
                 subtitle=format!("{client_ip}")
                 current_path=current_path.clone()
             />
@@ -210,7 +210,7 @@ pub fn TagListPage(client_ip: String, tag: String, posts: Vec<BlogListItem>) -> 
     view! {
         <div class="blog-wrapper">
             <HeaderBar
-                title="すずねーう".to_string()
+                title=crate::constants::AUTHOR_NAME.to_string()
                 subtitle=format!("{client_ip}")
                 current_path=format!("/tags/{tag}")
             />
@@ -315,7 +315,7 @@ pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> im
             <div class="top-content">
                 <div class="top-header">
                     <HeaderBar
-                        title="すずねーう".to_string()
+                        title=crate::constants::AUTHOR_NAME.to_string()
                         subtitle=format!("{client_ip}")
                         current_path=current_path.clone()
                     />
@@ -324,17 +324,17 @@ pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> im
                     <div class="top-profcard">
                         <div class="top-avatar">
                             <div>
-                                <img src="/assets/images/suzuneu.webp" alt="icon" />
+                                <img src=crate::constants::ICON_URL alt="icon" />
                             </div>
                         </div>
                         <div class="top-name">
-                            <div class="top-name-title">"すずねーう"</div>
+                            <div class="top-name-title">"\"{crate::constants::AUTHOR_NAME}\""</div>
                             <div class="top-name-subtitle">"自称プログラマー"</div>
                         </div>
                         <div class="top-social">
-                            <SocialIcon kind="X" href="https://x.com/suzuneu_discord" class="icon-x" />
-                            <SocialIcon kind="Twitter" href="https://x.com/suzuneu_discord" class="icon-twitter hidden" />
-                            <SocialIcon kind="GitHub" href="https://github.com/waki285" class="" />
+                            <SocialIcon kind="X" href=crate::constants::TWITTER_URL class="icon-x" />
+                            <SocialIcon kind="Twitter" href=crate::constants::TWITTER_URL class="icon-twitter hidden" />
+                            <SocialIcon kind="GitHub" href=crate::constants::GITHUB_URL class="" />
                             <SocialIcon kind="Discord" href="https://discord.com/users/717028469992587315" class="" />
                         </div>
                         <div class="top-profile-link">
@@ -424,7 +424,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                 <nav>
                     <div class="header-logo">
                         <a href="/" aria-label="home">
-                            <img src="/assets/images/suzuneu.webp" alt="" width="48" height="48" />
+                            <img src=crate::constants::ICON_URL alt="" width="48" height="48" />
                             <span>{title.clone()}</span>
                         </a>
                         <ShowIp subtitle=subtitle.clone() />
@@ -481,7 +481,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
             >
                 <nav>
                     <a href="/">
-                        <img src="/assets/images/suzuneu.webp" alt="" width="48" height="48" />
+                        <img src=crate::constants::ICON_URL alt="" width="48" height="48" />
                         <span>{title_clone}</span>
                     </a>
                     <div class="header-menu">
@@ -621,14 +621,14 @@ fn ShareButtons(title: String, slug: Option<String>) -> impl IntoView {
     };
 
     let safe_title = if title.is_empty() {
-        "すずねーうのブログ".to_string()
+        crate::constants::SITE_NAME.to_string()
     } else {
         title.clone()
     };
 
     let base = SITE_URL.trim_end_matches('/');
     let page_url = format!("{base}/blog/{slug}");
-    let tweet_text = format!("{safe_title}｜すずねーう");
+    let tweet_text = format!("{}{}", safe_title, crate::constants::SITE_TITLE_POSTFIX);
     let tweet_url = format!(
         "https://twitter.com/intent/tweet?text={}&url={}",
         encode(&tweet_text),

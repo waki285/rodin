@@ -6,6 +6,8 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::time::Duration;
 
+#[path = "../../src/constants.rs"]
+mod constants;
 #[path = "../../src/frontmatter.rs"]
 mod frontmatter;
 #[path = "../../build/markdown.rs"]
@@ -19,7 +21,7 @@ const PREAMBLE_PATH: &str = "static/preamble.typ";
 const GENERATED_DIR: &str = "static/generated";
 const GENERATED_MD_DIR: &str = "static/generated/md";
 const PANDOC_FILTER: &str = "scripts/pandoc/html-to-md.lua";
-const DEFAULT_SITE_URL: &str = "https://suzuneu.com";
+const DEFAULT_SITE_URL: &str = crate::constants::SITE_URL;
 const DEFAULT_SITEMAP_PATH: &str = "static/generated/sitemap.xml";
 const DEFAULT_RELOAD_URL: &str = "http://127.0.0.1:3000/__admin/reload";
 const DEFAULT_OS_INDEX: &str = "rodin-blog";

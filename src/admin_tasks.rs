@@ -15,11 +15,15 @@ const PREAMBLE_PATH: &str = "static/preamble.typ";
 const GENERATED_DIR: &str = "static/generated";
 const GENERATED_MD_DIR: &str = "static/generated/md";
 const PANDOC_FILTER: &str = "scripts/pandoc/html-to-md.lua";
-const DEFAULT_SITE_URL: &str = "https://suzuneu.com";
+const DEFAULT_SITE_URL: &str = crate::constants::SITE_URL;
 const DEFAULT_SITEMAP_PATH: &str = "static/generated/sitemap.xml";
 const DEFAULT_OS_INDEX: &str = "rodin-blog";
 
-pub fn run_build_and_index(opensearch: bool, reset_os: bool, skip_markdown: bool) -> anyhow::Result<String> {
+pub fn run_build_and_index(
+    opensearch: bool,
+    reset_os: bool,
+    skip_markdown: bool,
+) -> anyhow::Result<String> {
     let mut log = String::new();
     log.push_str("generating content...\n");
 

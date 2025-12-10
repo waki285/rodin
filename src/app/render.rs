@@ -13,8 +13,8 @@ use minify_html::{minify, Cfg as HtmlMinCfg};
 
 pub(crate) const CLIENT_IP_TOKEN: &str = "__CLIENT_IP_PLACEHOLDER__";
 pub(crate) const CSP_NONCE_TOKEN: &str = "__CSP_NONCE__";
-pub(crate) const SITE_URL: &str = "https://suzuneu.com";
-const ORG_ID: &str = "https://suzuneu.com/#organization";
+pub(crate) const SITE_URL: &str = crate::constants::SITE_URL;
+const ORG_ID: &str = crate::constants::SITE_URL;
 
 static KISO: LazyLock<String> = LazyLock::new(|| {
     let kiso = asset_url("/assets/build/kiso.css").replace("/assets", "static");
@@ -159,7 +159,7 @@ pub(crate) fn prerender_top_page(home_html: &str) -> String {
     };
     maybe_minify(wrap_html_with_options(
         &rendered,
-        "すずねーうのウェブサイト",
+        crate::constants::SITE_NAME,
         &opts,
     ))
 }
@@ -180,8 +180,8 @@ pub(crate) fn prerender_blog_page(meta: &FrontMatter, html_content: &str) -> Str
     let page_title = meta
         .title
         .as_ref()
-        .map(|t| format!("{t}｜すずねーう"))
-        .unwrap_or_else(|| "すずねーう".to_string());
+        .map(|t| format!("{}{}", t, crate::constants::SITE_TITLE_POSTFIX))
+        .unwrap_or_else(|| crate::constants::AUTHOR_NAME.to_string());
 
     let mut structured_vec = vec![build_site_structured_data()];
     if let Some(a) = build_article_structured_data(meta) {
@@ -245,7 +245,7 @@ pub(crate) fn prerender_profile_page(meta: &FrontMatter, profile_html: &str) -> 
         .or_insert_with(|| "すずねーうのプロフィールページ".to_string());
     meta_map
         .entry("og:title".to_string())
-        .or_insert_with(|| "プロフィール｜すずねーう".to_string());
+        .or_insert_with(|| format!("プロフィール{}", crate::constants::SITE_TITLE_POSTFIX));
     meta_map
         .entry("og:type".to_string())
         .or_insert_with(|| "profile".to_string());
@@ -286,7 +286,7 @@ pub(crate) fn prerender_profile_page(meta: &FrontMatter, profile_html: &str) -> 
     };
     maybe_minify(wrap_html_with_options(
         &rendered,
-        "プロフィール｜すずねーう",
+        format!("プロフィール{}", crate::constants::SITE_TITLE_POSTFIX).as_str(),
         &opts,
     ))
 }
@@ -353,7 +353,7 @@ pub(crate) fn prerender_static_page(
     };
     maybe_minify(wrap_html_with_options(
         &rendered,
-        &format!("{page_title}｜すずねーう"),
+        &format!("{}{}", page_title, crate::constants::SITE_TITLE_POSTFIX),
         &opts,
     ))
 }
@@ -386,7 +386,11 @@ pub(crate) fn render_search_page(
         )],
         ..Default::default()
     };
-    let html = wrap_html_with_options(&rendered, "検索｜すずねーう", &opts);
+    let html = wrap_html_with_options(
+        &rendered,
+        &format!("検索{}", crate::constants::SITE_TITLE_POSTFIX),
+        &opts,
+    );
     inject_runtime_tokens(&html, client_ip, nonce)
 }
 
@@ -461,9 +465,12 @@ fn top_meta() -> HashMap<String, String> {
     m.insert("og:description".to_string(), m["description"].clone());
     m.insert(
         "og:title".to_string(),
-        "すずねーうのウェブサイト".to_string(),
+        crate::constants::SITE_NAME.to_string(),
     );
-    m.insert("og:site_name".to_string(), "すずねーう".to_string());
+    m.insert(
+        "og:site_name".to_string(),
+        crate::constants::AUTHOR_NAME.to_string(),
+    );
     m.insert("og:type".to_string(), "website".to_string());
     m.insert("og:locale".to_string(), "ja_JP".to_string());
     m.insert("link:canonical".to_string(), SITE_URL.to_string());
@@ -477,7 +484,7 @@ fn build_site_structured_data() -> String {
             {
                 "@type": "Organization",
                 "@id": ORG_ID,
-                "name": "すずねーう",
+                "name": crate::constants::AUTHOR_NAME,
                 "url": SITE_URL,
                 "logo": {
                     "@type": "ImageObject",
@@ -489,7 +496,7 @@ fn build_site_structured_data() -> String {
                 "@type": "WebSite",
                 "@id": format!("{SITE_URL}/#website"),
                 "url": SITE_URL,
-                "name": "すずねーう",
+                "name": crate::constants::AUTHOR_NAME,
                 "inLanguage": "ja",
                 "publisher": { "@id": ORG_ID },
                 "potentialAction": {
@@ -509,7 +516,7 @@ fn build_homepage_structured_data() -> String {
         "@type": "WebPage",
         "@id": format!("{SITE_URL}/#webpage"),
         "url": SITE_URL,
-        "name": "すずねーう",
+        "name": crate::constants::AUTHOR_NAME,
         "description": "すずねーうのウェブサイト。Rust/Leptos/Typstで作ったブログとポートフォリオ",
         "inLanguage": "ja",
         "isPartOf": { "@id": ORG_ID },
@@ -593,14 +600,14 @@ fn build_article_structured_data(meta: &FrontMatter) -> Option<String> {
         images.push(absolute_url(img));
     }
     if images.is_empty() {
-        images.push(absolute_url("/static/images/suzuneu.webp"));
+        images.push(absolute_url(crate::constants::ICON_URL));
     }
 
     let author_name = meta
         .meta
         .get("author")
         .cloned()
-        .unwrap_or_else(|| "すずねーう".to_string());
+        .unwrap_or_else(|| crate::constants::AUTHOR_NAME.to_string());
     let author_url = meta.meta.get("link:author").cloned();
 
     let published = meta

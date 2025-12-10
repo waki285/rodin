@@ -2,6 +2,8 @@ use anyhow::Result;
 
 #[path = "build/assets.rs"]
 mod assets;
+#[path = "src/constants.rs"]
+pub mod constants;
 #[path = "build/fonts.rs"]
 mod fonts;
 #[path = "src/frontmatter.rs"]
@@ -18,7 +20,6 @@ const GENERATED_DIR: &str = "static/generated";
 const GENERATED_MD_DIR: &str = "static/generated/md";
 const PANDOC_FILTER: &str = "scripts/pandoc/html-to-md.lua";
 const MARKDOWN_ENV_KEY: &str = "RODIN_MARKDOWN_ENABLED";
-const SITE_URL: &str = "https://suzuneu.com";
 const SITEMAP_PATH: &str = "static/generated/sitemap.xml";
 
 fn main() -> Result<()> {
@@ -72,7 +73,7 @@ fn main() -> Result<()> {
     posts::build_profile(PREAMBLE_PATH, GENERATED_DIR)?;
     let pgp_meta = posts::build_pgp(PREAMBLE_PATH, GENERATED_DIR)?;
     let pgp_meta_ref = pgp_meta.as_ref();
-    sitemap::write_sitemap(&metas, pgp_meta_ref, SITE_URL, SITEMAP_PATH)?;
+    sitemap::write_sitemap(&metas, pgp_meta_ref, constants::SITE_URL, SITEMAP_PATH)?;
     Ok(())
 }
 
