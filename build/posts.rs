@@ -70,7 +70,9 @@ pub fn build_posts(preamble_path: &str, generated_dir: &str) -> Result<Vec<Front
                 // descriptions truncation (e.g. 60 chars)
                 let description = if meta.meta.get("description").is_some() {
                     let mut s: String = meta.meta.get("description").unwrap().chars().take(60).collect();
-                    s.push_str("...");
+                    if s.len() == 60 {
+                        s.push_str("...");
+                    }
                     s
                 } else {
                     meta.meta.get("description").unwrap_or(&"".to_string()).to_string()
