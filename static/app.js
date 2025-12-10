@@ -289,10 +289,22 @@
 
     // Handle popstate (back/forward)
     const handlePopState = (e) => {
+      const url = e.state?.url || location.href;
+
+      // ハッシュスキップ
+      const current = new URL(location.href);
+      const target = new URL(url, location.origin);
+      if (
+        current.origin === target.origin &&
+        current.pathname === target.pathname &&
+        current.search === target.search
+      ) {
+        return;
+      }
+
       // Save current scroll position before navigating
       saveScrollPosition();
 
-      const url = e.state?.url || location.href;
       const scrollKey = e.state?.scrollKey || url;
       const scrollPos = scrollPositions.get(scrollKey) || null;
 
