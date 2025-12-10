@@ -328,7 +328,7 @@ pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> im
                             </div>
                         </div>
                         <div class="top-name">
-                            <div class="top-name-title">format!("{}", crate::constants::AUTHOR_NAME)</div>
+                            <div class="top-name-title">{crate::constants::AUTHOR_NAME}</div>
                             <div class="top-name-subtitle">"自称プログラマー"</div>
                         </div>
                         <div class="top-social">
