@@ -360,6 +360,11 @@
   .prose nav[role="doc-toc"] > h2 {
     margin-top: 0.5em;
   }
+
+  /* Keep headings visible under fixed headers when jumping from TOC */
+  .prose :where(h1, h2, h3, h4, h5, h6):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    scroll-margin-top: clamp(72px, 12vw, 128px);
+  }
 }
 
 @layer utilities {

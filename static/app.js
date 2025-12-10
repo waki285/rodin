@@ -39,6 +39,9 @@
     let isNavigating = false;
     const scrollPositions = new Map(); // key -> { x, y }
 
+    let lastPathname = location.pathname + location.search;
+    let currentScrollKey = location.href + "-" + Date.now(); // 現在のページのscrollKey
+
     // Disable browser's default scroll restoration
     if ("scrollRestoration" in history) {
       history.scrollRestoration = "manual";
@@ -46,12 +49,12 @@
 
     // Generate a unique key for current history entry
     const getScrollKey = () => {
-      return history.state?.scrollKey || location.href;
+      return currentScrollKey;
     };
 
     // Save current scroll position
     const saveScrollPosition = () => {
-      const key = getScrollKey();
+      const key = currentScrollKey;
       scrollPositions.set(key, { x: window.scrollX, y: window.scrollY });
     };
 
@@ -213,15 +216,10 @@
 
     // Navigate to a new URL
     // pushState: true = normal navigation, false = popstate (back/forward)
-    const navigate = async (url, pushState = true, scrollPos = null) => {
+    const navigate = async (url, pushState = true, scrollPos = null, newScrollKey = null) => {
       if (isNavigating) return;
       // Only skip duplicate for normal navigation, not for popstate
       if (pushState && url === location.href) return;
-
-      // Save scroll position before navigating away
-      if (pushState) {
-        saveScrollPosition();
-      }
 
       isNavigating = true;
 
@@ -241,7 +239,14 @@
           // Create a unique scroll key for the new page
           const scrollKey = url + "-" + Date.now();
           history.pushState({ url, scrollKey }, "", url);
+          currentScrollKey = scrollKey;
+        } else if (newScrollKey) {
+          // popstateの場合は遷移先のscrollKeyを設定
+          currentScrollKey = newScrollKey;
         }
+
+        const parsed = new URL(url, location.origin);
+        lastPathname = parsed.pathname + parsed.search;
       } catch (err) {
         // Fallback to normal navigation on error
         location.href = url;
@@ -284,31 +289,27 @@
       }
 
       e.preventDefault();
+      // ナビゲーション前に即座にスクロール位置を保存（throttled scrollイベントより先に）
+      saveScrollPosition();
       navigate(url);
     };
 
     // Handle popstate (back/forward)
     const handlePopState = (e) => {
       const url = e.state?.url || location.href;
-
-      // ハッシュスキップ
-      const current = new URL(location.href);
       const target = new URL(url, location.origin);
-      if (
-        current.origin === target.origin &&
-        current.pathname === target.pathname &&
-        current.search === target.search
-      ) {
+      const targetPath = target.pathname + target.search;
+
+      // 同一ページ内のハッシュ移動のみの場合はスキップ
+      if (lastPathname === targetPath) {
         return;
       }
 
-      // Save current scroll position before navigating
-      saveScrollPosition();
-
+      // 遷移先のscrollKeyとスクロール位置を取得
       const scrollKey = e.state?.scrollKey || url;
       const scrollPos = scrollPositions.get(scrollKey) || null;
 
-      navigate(url, false, scrollPos);
+      navigate(url, false, scrollPos, scrollKey);
     };
 
     // Prefetch on hover/focus
@@ -330,16 +331,22 @@
       // Store initial state with scroll key
       const initialScrollKey = location.href + "-" + Date.now();
       history.replaceState({ url: location.href, scrollKey: initialScrollKey }, "", location.href);
+      currentScrollKey = initialScrollKey;
 
       // Event listeners
       document.addEventListener("click", handleClick);
       window.addEventListener("popstate", handlePopState);
 
       // Save scroll position on scroll (throttled)
+      // ナビゲーション中はスキップ（View Transitionによるスクロールリセットを保存しないため）
       let scrollTimeout;
       window.addEventListener("scroll", () => {
         clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(saveScrollPosition, 100);
+        scrollTimeout = setTimeout(() => {
+          if (!isNavigating) {
+            saveScrollPosition();
+          }
+        }, 100);
       }, { passive: true });
 
       // Save scroll position before page unload
