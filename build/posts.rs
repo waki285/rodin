@@ -67,12 +67,22 @@ pub fn build_posts(preamble_path: &str, generated_dir: &str) -> Result<Vec<Front
                 let date = meta.published_at.as_deref().unwrap_or("");
                 let updated = meta.updated_at.as_deref().unwrap_or("");
                 
+                // descriptions truncation (e.g. 60 chars)
+                let description = if meta.meta.get("description").is_some() {
+                    let mut s: String = meta.meta.get("description").unwrap().chars().take(60).collect();
+                    s.push_str("...");
+                    s
+                } else {
+                    meta.meta.get("description").unwrap_or(&"".to_string()).to_string()
+                };
+                
                 let og_source = format!(
-                    "#show: generate_og.with(title: \"{}\", author: \"{}\", date: \"{}\", updated: \"{}\")",
+                    "#show: generate_og.with(title: \"{}\", author: \"{}\", date: \"{}\", updated: \"{}\", description: \"{}\")",
                     title.replace('"', "\\\""),
                     "すずねーう",
                     date,
-                    updated
+                    updated,
+                    description.replace('"', "\\\"")
                 );
 
                 match generate_og_image(&og_template, &og_source, &binaries) {
@@ -309,6 +319,7 @@ fn parse_front_matter(slug: &str, source: &str) -> (FrontMatter, String) {
                 fm.updated_at = Some(val.trim().to_string());
                 continue;
             }
+
             if let Some(val) = trimmed.strip_prefix("meta>") {
                 // format: meta>key: value
                 if let Some((k, v)) = val.split_once(':') {

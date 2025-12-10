@@ -14,7 +14,7 @@
   )
 )
 
-#let generate_og(title: "", author: "すずねーう", icon: "suzuneu.webp", date: none, updated: none, body) = {
+#let generate_og(title: "", author: "すずねーう", icon: "suzuneu.webp", date: none, updated: none, description: "", body) = {
   place(background)
   
   // Center card
@@ -27,12 +27,19 @@
     inset: 60pt,
   )[
     #set align(left + horizon)
-    #set text(font: ("IBM Plex Sans JP", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Roboto"), size: 64pt, weight: "bold", fill: rgb("#333333"))
+    #set text(font: ("IBM Plex Sans JP"), fill: rgb("#333333"))
     
     // Title
-    #block(width: 100%, spacing: 2em)[
-      #title
+    #block(width: 100%, spacing: 3em)[
+      #text(size: 64pt, weight: "bold")[#title]
     ]
+
+    // Description (if available)
+    #if description != "" {
+      block(width: 100%, spacing: 1em)[
+        #text(size: 32pt, weight: "regular", fill: rgb("#666666"))[#description]
+      ]
+    }
     
     // Footer (Author info)
     #v(1fr)
