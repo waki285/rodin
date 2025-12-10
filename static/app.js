@@ -270,6 +270,8 @@
       if (link.target === "_blank") return;
 
       // ハッシュ (脚注) スキップ
+      if (href.startsWith("#")) return;
+
       const current = new URL(location.href);
       const target = new URL(url);
       if (
