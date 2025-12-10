@@ -520,7 +520,15 @@
       if (!(pre instanceof HTMLElement)) return;
       if (pre.dataset.copyInit) return;
       pre.dataset.copyInit = "1";
-      pre.style.position = pre.style.position || "relative";
+
+      let container = pre.parentElement;
+      if (!(container instanceof HTMLElement) || !container.classList.contains("code-copy-wrap")) {
+        container = document.createElement("div");
+        container.className = "code-copy-wrap";
+        pre.parentNode.insertBefore(container, pre);
+        container.appendChild(pre);
+      }
+
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "code-copy-btn";
@@ -538,7 +546,7 @@
             setTimeout(() => (btn.textContent = "Copy"), 1200);
           });
       });
-      pre.appendChild(btn);
+      container.appendChild(btn);
     });
   };
 

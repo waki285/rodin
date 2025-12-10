@@ -52,14 +52,14 @@
       align(horizon, text(size: 32pt, fill: rgb("#999999"), weight: "bold")[
         // Display dates if available
         #if updated != none {
-            // Check if updated is different/present
-             if updated != date {
-               [Updated: #updated]
-             } else {
-               [Published: #date]
-             }
-        } else if date != none {
+          // Check if updated is different/present
+          if updated != date {
+            [Updated: #updated]
+          } else {
             [Published: #date]
+          }
+        } else if date != none {
+          [Published: #date]
         }
       ])
     )

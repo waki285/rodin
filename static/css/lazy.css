@@ -56,3 +56,12 @@ html.dark {
 .code-copy-btn:active {
   transform: translateY(0);
 }
+
+.code-copy-wrap {
+  position: relative;
+}
+
+.code-copy-wrap pre {
+  overflow: auto;
+  padding-right: 48px;
+}
