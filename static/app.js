@@ -89,7 +89,7 @@
       const doc = parser.parseFromString(safeHTML(html), "text/html");
       const title = doc.title || "すずねーう";
       const bodyHtml = doc.body.innerHTML;
-      
+
       // Extract stylesheet links from the new page
       const stylesheets = Array.from(doc.querySelectorAll('link[rel="stylesheet"]'))
         .map((l) => l.getAttribute("href"))
@@ -133,14 +133,14 @@
           const link = document.createElement("link");
           link.rel = "stylesheet";
           link.href = href;
-          
+
           // Wait for it to load
           const loadPromise = new Promise((resolve) => {
             link.onload = resolve;
             link.onerror = resolve; // Don't block on error
           });
           promises.push(loadPromise);
-          
+
           document.head.appendChild(link);
         }
       }
@@ -162,14 +162,14 @@
           const script = document.createElement("script");
           script.src = src;
           script.async = true;
-          
+
           // Wait for it to load
           const loadPromise = new Promise((resolve) => {
             script.onload = resolve;
             script.onerror = resolve; // Don't block on error
           });
           promises.push(loadPromise);
-          
+
           document.body.appendChild(script);
         }
       }
@@ -269,6 +269,18 @@
       if (link.hasAttribute("download")) return;
       if (link.target === "_blank") return;
 
+      // ハッシュ (脚注) スキップ
+      const current = new URL(location.href);
+      const target = new URL(url);
+      if (
+        current.origin === target.origin &&
+        current.pathname === target.pathname &&
+        current.search === target.search &&
+        target.hash
+      ) {
+        return;
+      }
+
       e.preventDefault();
       navigate(url);
     };
@@ -277,11 +289,11 @@
     const handlePopState = (e) => {
       // Save current scroll position before navigating
       saveScrollPosition();
-      
+
       const url = e.state?.url || location.href;
       const scrollKey = e.state?.scrollKey || url;
       const scrollPos = scrollPositions.get(scrollKey) || null;
-      
+
       navigate(url, false, scrollPos);
     };
 
@@ -412,7 +424,7 @@
   // Theme Toggle
   // ============================================
   const THEME_KEY = "rodin-theme";
-  
+
   const toggles = () =>
     Array.from(document.querySelectorAll(".theme-toggle")).filter(
       (btn) => btn instanceof HTMLElement
@@ -430,7 +442,7 @@
     const stored = localStorage.getItem(THEME_KEY);
     const preferred =
       window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
+        window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
     const initial = stored || preferred;
@@ -577,7 +589,7 @@
   const initHomeScript = () => {
     if (window.location.pathname !== "/") return;
 
-    const loadHomeJs = () => import("/assets/build/home.js").catch(() => {});
+    const loadHomeJs = () => import("/assets/build/home.js").catch(() => { });
 
     // Wait for LCP, then load home.js
     if ("PerformanceObserver" in window) {
