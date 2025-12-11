@@ -9,7 +9,14 @@ use std::{collections::HashMap, fs, path::PathBuf, process::Command};
 /// Minify a JavaScript file with esbuild and return the minified content
 fn minify_js(src_path: &PathBuf) -> Result<String> {
     let tmp_dst = src_path.with_extension("js.tmp");
-    let esbuild = Command::new("node_modules/.bin/esbuild")
+
+    #[cfg(target_os = "windows")]
+    let esbuild_bin = "node_modules/.bin/esbuild.cmd";
+
+    #[cfg(not(target_os = "windows"))]
+    let esbuild_bin = "node_modules/.bin/esbuild";
+
+    let esbuild = Command::new(esbuild_bin)
         .args([
             src_path.to_string_lossy().as_ref(),
             "--platform=browser",

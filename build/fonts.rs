@@ -173,6 +173,7 @@ fn collect_from_file(path: impl AsRef<Path>, set: &mut BTreeSet<char>) -> Result
     Ok(())
 }
 
+#[cfg(not(windows))]
 fn write_if_changed(path: &str, data: &[u8]) -> Result<()> {
     let dst = PathBuf::from(path);
     if let Some(parent) = dst.parent() {
@@ -190,10 +191,23 @@ fn write_if_changed(path: &str, data: &[u8]) -> Result<()> {
 }
 
 fn subset_font(src: &str, ttf_out: &str, woff2_out: &str, glyphs: &BTreeSet<char>) -> Result<()> {
-    let font = fs::read(src).with_context(|| format!("failed to read {}", src))?;
-    let subset = hb_subset::subset(&font, glyphs.iter().copied())
-        .with_context(|| format!("hb-subset failed for {}", src))?;
-    write_if_changed(ttf_out, &subset)?;
+    #[cfg(not(windows))]
+    {
+        let font = fs::read(src).with_context(|| format!("failed to read {}", src))?;
+        let subset = hb_subset::subset(&font, glyphs.iter().copied())
+            .with_context(|| format!("hb-subset failed for {}", src))?;
+        write_if_changed(ttf_out, &subset)?;
+    }
+    #[cfg(windows)]
+    {
+        // hb-subset は使えない
+        if !Path::new("static/build").exists() {
+            fs::create_dir("static/build").with_context(|| "failed to create directory static/build")?;
+        }
+        fs::copy(src, ttf_out).with_context(|| format!("failed to copy {} to {}", src, ttf_out))?;
+        let _ = glyphs; // suppress unused warning
+    }
+
     compress_to_woff2(ttf_out, woff2_out)
 }
 
