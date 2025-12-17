@@ -9,6 +9,49 @@ use crate::frontmatter::FrontMatter;
 use urlencoding::encode;
 
 #[component]
+pub fn ContactPage(
+    client_ip: String,
+    current_path: String,
+    hcaptcha_site_key: Option<String>,
+) -> impl IntoView {
+    let site_key = hcaptcha_site_key.unwrap_or_default();
+    view! {
+        <div class="blog-wrapper">
+            <HeaderBar
+                title=crate::constants::AUTHOR_NAME.to_string()
+                subtitle=format!("{client_ip}")
+                current_path=current_path
+            />
+            <main class="contact-container">
+                <h1>"お問い合わせ"</h1>
+                <p class="contact-description">
+                    "ご連絡ありがとうございます。必要事項をご入力のうえ送信してください。"
+                </p>
+                <form id="contact-form" class="contact-form" method="post" action="/api/contact" novalidate>
+                    <label for="contact-name">"名前"</label>
+                    <input id="contact-name" name="name" type="text" autocomplete="name" required />
+
+                    <label for="contact-email">"メールアドレス"</label>
+                    <input id="contact-email" name="email" type="email" autocomplete="email" required />
+
+                    <label for="contact-message">"お問い合わせ内容"</label>
+                    <textarea id="contact-message" name="message" rows="6" required></textarea>
+
+                    {if site_key.is_empty() {
+                        view! { <p class="contact-warning">"hCaptcha の設定が未完了です。管理者にご連絡ください。"</p> }.into_any()
+                    } else {
+                        view! { <div class="h-captcha" data-sitekey=site_key></div> }.into_any()
+                    }}
+
+                    <button class="contact-submit" type="submit">"送信"</button>
+                    <p id="contact-status" class="contact-status" aria-live="polite"></p>
+                </form>
+            </main>
+        </div>
+    }
+}
+
+#[component]
 pub fn BlogListPage(
     client_ip: String,
     posts: Vec<BlogListItem>,
@@ -416,6 +459,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
     let blog_active = current_path.starts_with("/blog");
     let profile_active = current_path.starts_with("/profile");
     let search_active = current_path.starts_with("/search");
+    let contact_active = current_path.starts_with("/contact");
     let active_cls = "active";
     let inactive_cls = "inactive";
     view! {
@@ -444,6 +488,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                             <li><a data-prefetch="true" class=if blog_active { active_cls } else { inactive_cls } href="/blog">"ブログ"</a></li>
                             <li><a data-prefetch="true" class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
                             <li><a data-prefetch="true" class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
+                            <li><a data-prefetch="true" class=if contact_active { active_cls } else { inactive_cls } href="/contact">"お問い合わせ"</a></li>
                             <li>
                                 <button
                                     class="theme-toggle"
@@ -460,6 +505,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                                 <li><a data-prefetch="true" href="/blog">ブログ</a></li>
                                 <li><a data-prefetch="true" href="/profile">プロフィール</a></li>
                                 <li><a data-prefetch="true" href="/search">検索</a></li>
+                                <li><a data-prefetch="true" href="/contact">お問い合わせ</a></li>
                                 <li>
                                     <button
                                         class="theme-toggle"
@@ -499,6 +545,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                             <li><a data-prefetch="true" class=if blog_active { active_cls } else { inactive_cls } href="/blog">"ブログ"</a></li>
                             <li><a data-prefetch="true" class=if profile_active { active_cls } else { inactive_cls } href="/profile">"プロフィール"</a></li>
                             <li><a data-prefetch="true" class=if search_active { active_cls } else { inactive_cls } href="/search">"検索"</a></li>
+                            <li><a data-prefetch="true" class=if contact_active { active_cls } else { inactive_cls } href="/contact">"お問い合わせ"</a></li>
                             <li>
                                 <button
                                     class="theme-toggle"
@@ -515,6 +562,7 @@ fn HeaderBar(title: String, subtitle: String, current_path: String) -> impl Into
                                 <li><a data-prefetch="true" href="/blog">ブログ</a></li>
                                 <li><a data-prefetch="true" href="/profile">プロフィール</a></li>
                                 <li><a data-prefetch="true" href="/search">検索</a></li>
+                                <li><a data-prefetch="true" href="/contact">お問い合わせ</a></li>
                                 <li>
                                     <button
                                         class="theme-toggle"

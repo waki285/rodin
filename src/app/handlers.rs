@@ -1,14 +1,14 @@
 use anyhow::Result;
 use axum::{
     body::Body,
-    extract::{ConnectInfo, Extension, Path, Query, State},
+    extract::{ConnectInfo, Extension, Json, Path, Query, State},
     http::{header, HeaderMap, HeaderValue, Request, StatusCode},
     middleware::Next,
     response::{Html, IntoResponse, Redirect, Response},
 };
 use chrono::Utc;
 use reqwest::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     env,
@@ -27,7 +27,7 @@ use crate::app::{
 };
 
 const CSP_PREFIX: &str = "default-src 'self'; script-src 'self' 'nonce-";
-const CSP_SUFFIX: &str = "' static.cloudflareinsights.com platform.twitter.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' cloudflareinsights.com; object-src 'none'; frame-src https://platform.twitter.com https://syndication.twitter.com; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; trusted-types default rodin-spa rodin-twitter; require-trusted-types-for 'script'";
+const CSP_SUFFIX: &str = "' static.cloudflareinsights.com platform.twitter.com js.hcaptcha.com hcaptcha.com newassets.hcaptcha.com 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.hcaptcha.com; font-src 'self'; connect-src 'self' cloudflareinsights.com https://hcaptcha.com https://*.hcaptcha.com https://newassets.hcaptcha.com; object-src 'none'; frame-src https://platform.twitter.com https://syndication.twitter.com https://hcaptcha.com https://newassets.hcaptcha.com; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; trusted-types default rodin-spa rodin-twitter; require-trusted-types-for 'script'";
 const RSS_LIMIT: usize = 30;
 const DEFAULT_OS_INDEX: &str = "rodin-blog";
 
@@ -601,6 +601,197 @@ pub async fn pgp_handler(
     let client_ip = client_ip_from_headers(&headers).unwrap_or_else(|| addr.ip().to_string());
     let html = inject_runtime_tokens(&state.prerender_pgp, &client_ip, &nonce);
     Html(html).into_response()
+}
+
+pub async fn contact_handler(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Extension(nonce): Extension<String>,
+) -> Response {
+    let client_ip = client_ip_from_headers(&headers).unwrap_or_else(|| addr.ip().to_string());
+    let site_key = env::var("HCAPTCHA_SITE_KEY").ok();
+    let html = crate::app::render::render_contact_page(&client_ip, &nonce, site_key);
+    Html(html).into_response()
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct ContactFormPayload {
+    name: String,
+    email: String,
+    message: String,
+    #[serde(rename = "h-captcha-response")]
+    hcaptcha_response: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct ContactApiResponse {
+    ok: bool,
+    message: String,
+}
+
+pub async fn contact_submit_handler(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Json(payload): Json<ContactFormPayload>,
+) -> Response {
+    let client_ip = client_ip_from_headers(&headers).unwrap_or_else(|| addr.ip().to_string());
+
+    let name = payload.name.trim();
+    let email = payload.email.trim();
+    let message = payload.message.trim();
+
+    if name.is_empty() || email.is_empty() || message.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ContactApiResponse {
+                ok: false,
+                message: "必須項目が未入力です。".to_string(),
+            }),
+        )
+            .into_response();
+    }
+    if name.len() > 100 || email.len() > 200 || message.len() > 5000 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ContactApiResponse {
+                ok: false,
+                message: "入力内容が長すぎます。".to_string(),
+            }),
+        )
+            .into_response();
+    }
+
+    let token = match payload.hcaptcha_response.as_deref() {
+        Some(t) if !t.trim().is_empty() => t.trim(),
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ContactApiResponse {
+                    ok: false,
+                    message: "hCaptcha の認証が必要です。".to_string(),
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    // Validate hCaptcha
+    match verify_hcaptcha(token, &client_ip).await {
+        Ok(true) => {}
+        Ok(false) => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ContactApiResponse {
+                    ok: false,
+                    message: "hCaptcha の検証に失敗しました。".to_string(),
+                }),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            tracing::warn!("hcaptcha verify error: {e:?}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ContactApiResponse {
+                    ok: false,
+                    message: "サーバー側で認証に失敗しました。".to_string(),
+                }),
+            )
+                .into_response();
+        }
+    }
+
+    // Send to Discord
+    if let Err(e) = send_discord_webhook(&payload, &client_ip).await {
+        tracing::error!("discord webhook error: {e:?}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ContactApiResponse {
+                ok: false,
+                message: "送信に失敗しました。時間をおいて再度お試しください。".to_string(),
+            }),
+        )
+            .into_response();
+    }
+
+    (
+        StatusCode::OK,
+        Json(ContactApiResponse {
+            ok: true,
+            message: "送信しました。ありがとうございます。".to_string(),
+        }),
+    )
+        .into_response()
+}
+
+#[derive(Debug, Deserialize)]
+struct HcaptchaVerifyResponse {
+    success: bool,
+    #[serde(default)]
+    score: Option<f64>,
+    #[serde(rename = "error-codes", default)]
+    error_codes: Vec<String>,
+}
+
+async fn verify_hcaptcha(token: &str, client_ip: &str) -> Result<bool> {
+    let secret = env::var("HCAPTCHA_SECRET")
+        .map_err(|_| anyhow::anyhow!("HCAPTCHA_SECRET is not set"))?;
+
+    let client = Client::builder()
+        .user_agent("rodin-contact/1.0")
+        .build()?;
+
+    let resp = client
+        .post("https://hcaptcha.com/siteverify")
+        .form(&[
+            ("secret", secret.as_str()),
+            ("response", token),
+            ("remoteip", client_ip),
+        ])
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        anyhow::bail!("hcaptcha status {}", resp.status());
+    }
+
+    let body: HcaptchaVerifyResponse = resp.json().await?;
+    Ok(body.success)
+}
+
+async fn send_discord_webhook(payload: &ContactFormPayload, client_ip: &str) -> Result<()> {
+    let webhook_url = env::var("DISCORD_WEBHOOK_URL")
+        .map_err(|_| anyhow::anyhow!("DISCORD_WEBHOOK_URL is not set"))?;
+
+    let mut message = payload.message.trim().to_string();
+    if message.len() > 1500 {
+        message.truncate(1500);
+        message.push_str("…");
+    }
+
+    let content = format!(
+        "**お問い合わせフォーム**\n名前: {}\nメール: {}\nIP: {}\n時刻: {}\n\n{}",
+        payload.name.trim(),
+        payload.email.trim(),
+        client_ip,
+        Utc::now().to_rfc3339(),
+        message
+    );
+
+    let client = Client::builder()
+        .user_agent("rodin-contact/1.0")
+        .build()?;
+
+    let resp = client
+        .post(webhook_url)
+        .json(&serde_json::json!({ "content": content }))
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        anyhow::bail!("discord webhook status {}", resp.status());
+    }
+    Ok(())
 }
 
 pub async fn raw_typ_response(state: &AppState, slug: &str, headers: &HeaderMap) -> Response {

@@ -394,6 +394,87 @@ pub(crate) fn render_search_page(
     inject_runtime_tokens(&html, client_ip, nonce)
 }
 
+pub(crate) fn render_contact_page(
+    client_ip: &str,
+    nonce: &str,
+    hcaptcha_site_key: Option<String>,
+) -> String {
+    let rendered = Owner::new_root(None).with(|| {
+        view! {
+            <crate::components::ContactPage
+                client_ip=client_ip.to_string()
+                current_path="/contact".to_string()
+                hcaptcha_site_key=hcaptcha_site_key.clone()
+            />
+        }
+        .to_html()
+    });
+
+    let mut meta = HashMap::new();
+    meta.insert("link:canonical".to_string(), format!("{SITE_URL}/contact"));
+    meta.insert("description".to_string(), "お問い合わせフォーム".to_string());
+
+    let hcaptcha_script = format!(
+        r#"<script src="https://js.hcaptcha.com/1/api.js" async defer nonce="{CSP_NONCE_TOKEN}"></script>"#
+    );
+    let inline_script = r#"<script nonce="__CSP_NONCE__">
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("contact-form");
+  if (!form) return;
+  const statusEl = document.getElementById("contact-status");
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const submitBtn = form.querySelector("button[type=\"submit\"]");
+    if (submitBtn) submitBtn.disabled = true;
+    if (statusEl) statusEl.textContent = "送信中...";
+    const fd = new FormData(form);
+    const payload = {};
+    fd.forEach((value, key) => {
+      payload[key] = value;
+    });
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || "送信に失敗しました。");
+      }
+      if (statusEl) statusEl.textContent = data?.message || "送信しました。";
+      form.reset();
+      if (window.hcaptcha && typeof window.hcaptcha.reset === "function") {
+        window.hcaptcha.reset();
+      }
+    } catch (e) {
+      if (statusEl) statusEl.textContent = e?.message || "送信に失敗しました。";
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  });
+});
+</script>"#
+        .to_string();
+
+    let opts = HtmlOptions {
+        meta: Some(meta),
+        head_links: vec![format!(
+            r#"<link rel="stylesheet" href="{href}" />"#,
+            href = asset_url("/assets/build/contact.css")
+        )],
+        head_scripts: vec![hcaptcha_script, inline_script],
+        ..Default::default()
+    };
+
+    let html = wrap_html_with_options(
+        &rendered,
+        &format!("お問い合わせ{}", crate::constants::SITE_TITLE_POSTFIX),
+        &opts,
+    );
+    inject_runtime_tokens(&html, client_ip, nonce)
+}
+
 pub(crate) fn inject_runtime_tokens(template: &str, client_ip: &str, nonce: &str) -> String {
     // 1パスで両方のトークンを置換（2回のString::replaceより効率的）
     let mut result =

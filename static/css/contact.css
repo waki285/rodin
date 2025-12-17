@@ -1,0 +1,121 @@
+@layer components {
+  .contact-container {
+    margin: 0 auto;
+    max-width: var(--container-3xl);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .contact-container h1 {
+    font-size: var(--text-3xl);
+    line-height: var(--text-3xl--line-height);
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .contact-description {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--color-slate-600);
+    &:where(.dark, .dark *) {
+      color: var(--color-slate-300);
+    }
+  }
+
+  .contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .contact-form label {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    font-weight: 600;
+    color: var(--color-slate-700);
+    &:where(.dark, .dark *) {
+      color: var(--color-slate-200);
+    }
+  }
+
+  .contact-form input[type="text"],
+  .contact-form input[type="email"],
+  .contact-form textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    border: 1px solid var(--color-slate-300);
+    border-radius: var(--radius-lg);
+    background-color: white;
+    box-shadow: var(--shadow-sm);
+    &:focus {
+      outline: none;
+      border-color: var(--color-sky-500);
+      box-shadow: initial 0 0 0 2px var(--color-slate-400);
+    }
+    &:where(.dark, .dark *) {
+      background-color: var(--color-slate-800);
+      border-color: var(--color-slate-600);
+      color: var(--color-slate-50);
+      &:focus {
+        box-shadow: initial 0 0 0 2px var(--color-slate-500);
+      }
+    }
+  }
+
+  .contact-form textarea {
+    min-height: 10rem;
+    resize: vertical;
+  }
+
+  .contact-submit {
+    padding: 0.6rem 1rem;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    font-weight: 600;
+    color: white;
+    background-color: var(--color-slate-900);
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: background-color var(--default-transition-duration, 0.15s) ease,
+      box-shadow var(--default-transition-duration, 0.15s) ease;
+    &:hover {
+      background-color: var(--color-slate-800);
+    }
+    &:where(.dark, .dark *) {
+      background-color: var(--color-slate-100);
+      color: var(--color-slate-900);
+      &:hover {
+        background-color: white;
+      }
+    }
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+  }
+
+  .contact-status {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--color-slate-600);
+    min-height: 1.25rem;
+    &:where(.dark, .dark *) {
+      color: var(--color-slate-300);
+    }
+  }
+
+  .contact-warning {
+    font-size: var(--text-sm);
+    color: var(--color-amber-700);
+    &:where(.dark, .dark *) {
+      color: var(--color-amber-300);
+    }
+  }
+}
+
