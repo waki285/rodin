@@ -1,4 +1,4 @@
-FROM opensearchproject/opensearch:3.3.2
+FROM opensearchproject/opensearch:3.4.0
 
 # Install Japanese analyzers once at build time to avoid re-downloading on each up
 RUN bin/opensearch-plugin install --batch analysis-kuromoji \
