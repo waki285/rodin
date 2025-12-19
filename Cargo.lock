@@ -5911,9 +5911,9 @@ dependencies = [
 
 [[package]]
 name = "typst-html"
-version = "0.14.1"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4985608c896e00fc4219403040662ca771a58be79cc3d2c105b61f33715f6be2"
+checksum = "e29f8da4f964d4c90739c3c1e0288b0ba1bccc3cc50623a6d558300b86ca8aad"
 dependencies = [
  "bumpalo",
  "comemo",
@@ -6102,9 +6102,9 @@ dependencies = [
 
 [[package]]
 name = "typst-svg"
-version = "0.14.1"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "045a396e4543906fae4868c0c621a2a6322aa56d4023d207cdab30517e39787a"
+checksum = "e46b811837ade1f0243ef0d8bf3fb06d166443090eac22c28643f374c2ccdc9d"
 dependencies = [
  "base64 0.22.1",
  "comemo",
