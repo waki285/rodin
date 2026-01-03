@@ -96,6 +96,15 @@ pub async fn run() -> anyhow::Result<()> {
         )
         .route("/__admin/api/run", post(admin::admin_run_handler))
         .route("/__admin/api/reload", post(admin::admin_reload_handler))
+        .route("/__admin/api/git-pull", post(admin::admin_git_pull_handler))
+        .route(
+            "/__admin/api/font-subset",
+            post(admin::admin_font_subset_handler),
+        )
+        .route(
+            "/__admin/api/purge-cache",
+            post(admin::admin_purge_cache_handler),
+        )
         .route("/__admin/reload", post(handlers::reload_handler))
         .route_service(
             "/sitemap.xml",

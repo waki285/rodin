@@ -265,6 +265,30 @@ fn admin_page_html(_client_ip: &str, nonce: &str) -> String {
             状態をリロード
         </button>
       </div>
+      <div>
+        <h3>Git Pull</h3>
+        <p class="muted">contentリポジトリを更新します。</p>
+        <button id="git-pull-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/></svg>
+            Git Pull
+        </button>
+      </div>
+      <div>
+        <h3>フォントサブセット</h3>
+        <p class="muted">フォントをサブセット化して最適化します。</p>
+        <button id="font-subset-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+            フォントサブセット
+        </button>
+      </div>
+      <div>
+        <h3>Cloudflare キャッシュパージ</h3>
+        <p class="muted">CloudflareのCDNキャッシュをクリアします。</p>
+        <button id="purge-cache-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+            キャッシュパージ
+        </button>
+      </div>
     </div>
     <pre id="log" class="mono"></pre>
   </section>
@@ -508,6 +532,8 @@ pub struct AdminRunReq {
 #[derive(serde::Serialize)]
 struct AdminRunResp {
     log: String,
+    success: bool,
+    error: Option<String>,
 }
 
 pub async fn admin_run_handler(
@@ -527,15 +553,34 @@ pub async fn admin_run_handler(
     })
     .await
     {
-        Ok(Ok(log)) => log,
-        _ => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+        Ok(Ok(log)) => AdminRunResp {
+            log,
+            success: true,
+            error: None,
+        },
+        Ok(Err(e)) => AdminRunResp {
+            log: String::new(),
+            success: false,
+            error: Some(format!("{e:#}")),
+        },
+        Err(e) => AdminRunResp {
+            log: String::new(),
+            success: false,
+            error: Some(format!("Task panicked: {e}")),
+        },
     };
 
-    if state::reload_state(&shared).await.is_err() {
-        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    if res.success {
+        if state::reload_state(&shared).await.is_err() {
+            return Ok(axum::Json(AdminRunResp {
+                log: res.log,
+                success: false,
+                error: Some("Failed to reload state".to_string()),
+            }));
+        }
     }
 
-    Ok(axum::Json(AdminRunResp { log: res }))
+    Ok(axum::Json(res))
 }
 
 #[derive(serde::Serialize)]
@@ -556,4 +601,87 @@ pub async fn admin_reload_handler(
         })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+#[derive(serde::Serialize)]
+struct AdminTaskResp {
+    log: String,
+    success: bool,
+    error: Option<String>,
+}
+
+pub async fn admin_git_pull_handler(headers: HeaderMap) -> Result<impl IntoResponse, StatusCode> {
+    if !verify_session(&headers) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    let res = match tokio::task::spawn_blocking(admin_tasks::run_git_pull).await {
+        Ok(Ok(log)) => AdminTaskResp {
+            log,
+            success: true,
+            error: None,
+        },
+        Ok(Err(e)) => AdminTaskResp {
+            log: String::new(),
+            success: false,
+            error: Some(format!("{e:#}")),
+        },
+        Err(e) => AdminTaskResp {
+            log: String::new(),
+            success: false,
+            error: Some(format!("Task panicked: {e}")),
+        },
+    };
+    Ok(axum::Json(res))
+}
+
+pub async fn admin_font_subset_handler(
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, StatusCode> {
+    if !verify_session(&headers) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    let res = match tokio::task::spawn_blocking(admin_tasks::run_font_subset).await {
+        Ok(Ok(log)) => AdminTaskResp {
+            log,
+            success: true,
+            error: None,
+        },
+        Ok(Err(e)) => AdminTaskResp {
+            log: String::new(),
+            success: false,
+            error: Some(format!("{e:#}")),
+        },
+        Err(e) => AdminTaskResp {
+            log: String::new(),
+            success: false,
+            error: Some(format!("Task panicked: {e}")),
+        },
+    };
+    Ok(axum::Json(res))
+}
+
+pub async fn admin_purge_cache_handler(
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, StatusCode> {
+    if !verify_session(&headers) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    let res = match tokio::task::spawn_blocking(admin_tasks::purge_cloudflare_cache).await {
+        Ok(Ok(log)) => AdminTaskResp {
+            log,
+            success: true,
+            error: None,
+        },
+        Ok(Err(e)) => AdminTaskResp {
+            log: String::new(),
+            success: false,
+            error: Some(format!("{e:#}")),
+        },
+        Err(e) => AdminTaskResp {
+            log: String::new(),
+            success: false,
+            error: Some(format!("Task panicked: {e}")),
+        },
+    };
+    Ok(axum::Json(res))
 }

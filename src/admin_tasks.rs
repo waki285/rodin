@@ -2,8 +2,10 @@ use crate::frontmatter::FrontMatter;
 use regex::Regex;
 use reqwest::blocking::Client;
 use serde_json::json;
-use std::{env, time::Duration};
+use std::{env, process::Command, time::Duration};
 
+#[path = "../build/fonts.rs"]
+mod fonts;
 #[path = "../build/markdown.rs"]
 mod markdown;
 #[path = "../build/posts.rs"]
@@ -233,9 +235,7 @@ fn push_to_opensearch(metas: &[FrontMatter], cfg: &OpenSearchCfg) -> anyhow::Res
         });
         bulk.push_str(&format!(
             "{{\"index\":{{\"_index\":\"{}\",\"_id\":\"{}\"}}}}\n{}\n",
-            cfg.index,
-            m.slug,
-            doc
+            cfg.index, m.slug, doc
         ));
     }
 
@@ -266,4 +266,130 @@ impl BasicAuthOpt for reqwest::blocking::RequestBuilder {
             self
         }
     }
+}
+
+/// Git pull for content directory
+///
+/// Uses `git pull` for cloned repos (production) or `git submodule update --remote` for submodules (development)
+pub fn run_git_pull() -> anyhow::Result<String> {
+    let mut log = String::new();
+
+    // Check if content is a submodule by looking for .git file (not directory)
+    let content_git = std::path::Path::new("content/.git");
+    let is_submodule = content_git.exists() && content_git.is_file();
+
+    if is_submodule {
+        log.push_str("content is a submodule, running git submodule update --remote...\n");
+        let output = Command::new("git")
+            .args(["submodule", "update", "--remote", "content"])
+            .output()?;
+        log.push_str(&String::from_utf8_lossy(&output.stdout));
+        log.push_str(&String::from_utf8_lossy(&output.stderr));
+        if !output.status.success() {
+            anyhow::bail!(
+                "git submodule update failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    } else {
+        log.push_str("content is a cloned repo, running git pull...\n");
+        let output = Command::new("git")
+            .args(["-C", "content", "pull", "--ff-only"])
+            .output()?;
+        log.push_str(&String::from_utf8_lossy(&output.stdout));
+        log.push_str(&String::from_utf8_lossy(&output.stderr));
+        if !output.status.success() {
+            anyhow::bail!(
+                "git pull failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
+
+    log.push_str("git pull completed\n");
+    Ok(log)
+}
+
+/// Run font subsetting
+/// On Windows without hb-subset, this will skip the actual subsetting
+pub fn run_font_subset() -> anyhow::Result<String> {
+    let mut log = String::new();
+    log.push_str("running font subset...\n");
+
+    match fonts::subset_regular_font() {
+        Ok(()) => {
+            log.push_str("font subset completed\n");
+        }
+        Err(e) => {
+            // On Windows, hb-subset may not be available
+            if cfg!(windows) {
+                log.push_str(&format!(
+                    "font subset skipped (Windows/hb-subset not available): {e}\n"
+                ));
+            } else {
+                return Err(e);
+            }
+        }
+    }
+
+    Ok(log)
+}
+
+/// Purge Cloudflare cache for site URLs
+/// Requires CLOUDFLARE_ZONE_ID and CLOUDFLARE_API_TOKEN environment variables
+pub fn purge_cloudflare_cache() -> anyhow::Result<String> {
+    let mut log = String::new();
+
+    let zone_id = env::var("CLOUDFLARE_ZONE_ID")
+        .map_err(|_| anyhow::anyhow!("CLOUDFLARE_ZONE_ID environment variable not set"))?;
+    let api_token = env::var("CLOUDFLARE_API_TOKEN")
+        .map_err(|_| anyhow::anyhow!("CLOUDFLARE_API_TOKEN environment variable not set"))?;
+
+    log.push_str("purging Cloudflare cache...\n");
+
+    let client = Client::builder()
+        .timeout(Duration::from_secs(30))
+        .user_agent("rodin-admin/1.0")
+        .build()?;
+
+    // Purge by prefix (SITE_URL)
+    let site_url = crate::constants::SITE_URL;
+    log.push_str(&format!("purging prefix: {site_url}\n"));
+
+    let resp = client
+        .post(format!(
+            "https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache"
+        ))
+        .header("Authorization", format!("Bearer {api_token}"))
+        .header("Content-Type", "application/json")
+        .json(&json!({
+            "prefixes": [site_url]
+        }))
+        .send()?;
+
+    let status = resp.status();
+    let body: serde_json::Value = resp.json().unwrap_or_default();
+
+    if !status.is_success() {
+        let errors = body
+            .get("errors")
+            .and_then(|e| serde_json::to_string(e).ok())
+            .unwrap_or_else(|| "unknown error".to_string());
+        anyhow::bail!("Cloudflare API error ({}): {}", status, errors);
+    }
+
+    let success = body
+        .get("success")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if !success {
+        let errors = body
+            .get("errors")
+            .and_then(|e| serde_json::to_string(e).ok())
+            .unwrap_or_else(|| "unknown error".to_string());
+        anyhow::bail!("Cloudflare purge failed: {}", errors);
+    }
+
+    log.push_str("Cloudflare cache purged successfully\n");
+    Ok(log)
 }

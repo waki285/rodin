@@ -85,7 +85,11 @@ async function runBuild() {
     skip_markdown: $('skip-md').checked,
   };
   const res = await fetchJSON('/__admin/api/run', payload);
-  logEl.textContent = res.log || 'done';
+  if (res.success) {
+    logEl.textContent = res.log || 'done';
+  } else {
+    logEl.textContent = '❌ エラー:\n' + (res.error || 'unknown error') + '\n\n' + res.log;
+  }
 }
 
 async function doReload() {
@@ -95,9 +99,42 @@ async function doReload() {
   logEl.textContent = res.message || 'reloaded';
 }
 
+async function doGitPull() {
+  logEl.textContent = 'Git Pull 実行中...';
+  const res = await fetchJSON('/__admin/api/git-pull', {});
+  if (res.success) {
+    logEl.textContent = res.log || 'done';
+  } else {
+    logEl.textContent = '❌ エラー:\n' + (res.error || 'unknown error');
+  }
+}
+
+async function doFontSubset() {
+  logEl.textContent = 'フォントサブセット実行中...';
+  const res = await fetchJSON('/__admin/api/font-subset', {});
+  if (res.success) {
+    logEl.textContent = res.log || 'done';
+  } else {
+    logEl.textContent = '❌ エラー:\n' + (res.error || 'unknown error');
+  }
+}
+
+async function doPurgeCache() {
+  logEl.textContent = 'キャッシュパージ実行中...';
+  const res = await fetchJSON('/__admin/api/purge-cache', {});
+  if (res.success) {
+    logEl.textContent = res.log || 'done';
+  } else {
+    logEl.textContent = '❌ エラー:\n' + (res.error || 'unknown error');
+  }
+}
+
 $('register-btn').onclick = () => startRegister().catch((e) => ($('register-output').textContent = e.message));
 $('login-btn').onclick = () => startLogin().catch((e) => ($('login-hint').textContent = e.message));
 $('run-build').onclick = () => runBuild().catch((e) => (logEl.textContent = e.message));
 $('reload-btn').onclick = () => doReload().catch((e) => (logEl.textContent = e.message));
+$('git-pull-btn').onclick = () => doGitPull().catch((e) => (logEl.textContent = e.message));
+$('font-subset-btn').onclick = () => doFontSubset().catch((e) => (logEl.textContent = e.message));
+$('purge-cache-btn').onclick = () => doPurgeCache().catch((e) => (logEl.textContent = e.message));
 
 refreshStatus().catch(console.error);

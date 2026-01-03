@@ -545,10 +545,7 @@ pub async fn rss_handler(State(state): State<SharedAppState>) -> Response {
 
     for entry in items.into_iter().take(RSS_LIMIT) {
         let link = format!("{}/blog/{}", SITE_URL, entry.slug);
-        let desc = entry
-            .description
-            .as_deref()
-            .unwrap_or(entry.title.as_str());
+        let desc = entry.description.as_deref().unwrap_or(entry.title.as_str());
         let pub_date = entry
             .published_at
             .as_deref()
