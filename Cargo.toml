@@ -59,6 +59,8 @@ urlencoding = "2.1"
 uuid = { version = "1.10", features = ["v4"] }
 webauthn-rs = "0.5"
 
+[target.'cfg(not(windows))'.dependencies]
+hb-subset = "0.3.0"
 
 [target.'cfg(not(windows))'.build-dependencies]
 hb-subset = "0.3.0"

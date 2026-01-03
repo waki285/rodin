@@ -6,18 +6,18 @@ use std::{
     process::Command,
 };
 
-const REGULAR_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-Regular.ttf";
-const SEMIBOLD_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-SemiBold.ttf";
-const BOLD_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-Bold.ttf";
+pub const REGULAR_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-Regular.ttf";
+pub const SEMIBOLD_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-SemiBold.ttf";
+pub const BOLD_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-Bold.ttf";
 
-const REGULAR_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Regular.subset.ttf";
-const REGULAR_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Regular.subset.woff2";
-const SEMIBOLD_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Semibold.subset.ttf";
-const SEMIBOLD_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Semibold.subset.woff2";
-const BOLD_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Bold.subset.ttf";
-const BOLD_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Bold.subset.woff2";
+pub const REGULAR_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Regular.subset.ttf";
+pub const REGULAR_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Regular.subset.woff2";
+pub const SEMIBOLD_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Semibold.subset.ttf";
+pub const SEMIBOLD_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Semibold.subset.woff2";
+pub const BOLD_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Bold.subset.ttf";
+pub const BOLD_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Bold.subset.woff2";
 
-const TEXT_SOURCES: &[&str] = &[
+pub const TEXT_SOURCES: &[&str] = &[
     "src/app/handlers.rs",      // not_found_response HTML
     "src/components.rs",        // top/profile/blog chrome
     "src/components/search.rs", // search page strings
@@ -27,7 +27,7 @@ const TEXT_SOURCES: &[&str] = &[
 
 /// Additional characters to include in Bold font subset (beyond H1 headings)
 /// These are characters used with font-weight: 700 in critical UI elements
-const BOLD_EXTRA_CHARS: &str = "すずねーう目次プロフィール検索結果件見つかりました";
+pub const BOLD_EXTRA_CHARS: &str = "すずねーう目次プロフィール検索結果件見つかりました";
 
 pub fn subset_regular_font() -> Result<()> {
     println!("cargo:rerun-if-changed={REGULAR_FONT_SRC}");
@@ -69,7 +69,7 @@ pub fn subset_regular_font() -> Result<()> {
     Ok(())
 }
 
-fn collect_glyphs() -> Result<BTreeSet<char>> {
+pub fn collect_glyphs() -> Result<BTreeSet<char>> {
     let mut set = BTreeSet::new();
 
     for path in TEXT_SOURCES {
@@ -91,7 +91,7 @@ fn collect_glyphs() -> Result<BTreeSet<char>> {
 /// Collect minimal glyphs for Bold font:
 /// - Characters from `= ` lines (H1 headings) in .typ files
 /// - Extra characters defined in BOLD_EXTRA_CHARS
-fn collect_bold_glyphs() -> Result<BTreeSet<char>> {
+pub fn collect_bold_glyphs() -> Result<BTreeSet<char>> {
     let mut set = BTreeSet::new();
 
     // Add extra characters for Bold font
@@ -190,7 +190,7 @@ fn write_if_changed(path: &str, data: &[u8]) -> Result<()> {
     Ok(())
 }
 
-fn subset_font(src: &str, ttf_out: &str, woff2_out: &str, glyphs: &BTreeSet<char>) -> Result<()> {
+pub fn subset_font(src: &str, ttf_out: &str, woff2_out: &str, glyphs: &BTreeSet<char>) -> Result<()> {
     #[cfg(not(windows))]
     {
         let font = fs::read(src).with_context(|| format!("failed to read {}", src))?;

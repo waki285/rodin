@@ -1,11 +1,10 @@
 use crate::frontmatter::FrontMatter;
 use regex::Regex;
 use reqwest::blocking::Client;
+use rodin::fonts;
 use serde_json::json;
 use std::{env, process::Command, time::Duration};
 
-#[path = "../build/fonts.rs"]
-mod fonts;
 #[path = "../build/markdown.rs"]
 mod markdown;
 #[path = "../build/posts.rs"]
@@ -311,24 +310,76 @@ pub fn run_git_pull() -> anyhow::Result<String> {
 }
 
 /// Run font subsetting
-/// On Windows without hb-subset, this will skip the actual subsetting
+/// Collects glyphs from content and source files, then subsets fonts
 pub fn run_font_subset() -> anyhow::Result<String> {
+    use std::{fs, path::Path};
+
     let mut log = String::new();
     log.push_str("running font subset...\n");
 
-    match fonts::subset_regular_font() {
-        Ok(()) => {
-            log.push_str("font subset completed\n");
+    #[cfg(not(windows))]
+    {
+        // Create output directory
+        if !Path::new("static/build").exists() {
+            fs::create_dir_all("static/build")?;
         }
-        Err(e) => {
-            // On Windows, hb-subset may not be available
-            if cfg!(windows) {
-                log.push_str(&format!(
-                    "font subset skipped (Windows/hb-subset not available): {e}\n"
-                ));
-            } else {
-                return Err(e);
-            }
+
+        // Use existing font subsetting logic from build
+        let glyphs = fonts::collect_glyphs()?;
+        let bold_glyphs = fonts::collect_bold_glyphs()?;
+
+        log.push_str(&format!(
+            "collected {} glyphs for regular/semibold fonts\n",
+            glyphs.len()
+        ));
+        log.push_str(&format!("collected {} glyphs for bold font\n", bold_glyphs.len()));
+
+        // Subset fonts
+        log.push_str(&format!("subsetting {}...\n", fonts::SEMIBOLD_FONT_SRC));
+        fonts::subset_font(
+            fonts::SEMIBOLD_FONT_SRC,
+            fonts::SEMIBOLD_FONT_TTF_OUT,
+            fonts::SEMIBOLD_FONT_WOFF2_OUT,
+            &glyphs,
+        )?;
+
+        log.push_str(&format!("subsetting {}...\n", fonts::REGULAR_FONT_SRC));
+        fonts::subset_font(
+            fonts::REGULAR_FONT_SRC,
+            fonts::REGULAR_FONT_TTF_OUT,
+            fonts::REGULAR_FONT_WOFF2_OUT,
+            &glyphs,
+        )?;
+
+        log.push_str(&format!("subsetting {}...\n", fonts::BOLD_FONT_SRC));
+        fonts::subset_font(
+            fonts::BOLD_FONT_SRC,
+            fonts::BOLD_FONT_TTF_OUT,
+            fonts::BOLD_FONT_WOFF2_OUT,
+            &bold_glyphs,
+        )?;
+
+        log.push_str("font subset completed\n");
+    }
+
+    #[cfg(windows)]
+    {
+        log.push_str("font subsetting is not available on Windows (hb-subset not supported)\n");
+        log.push_str("fonts will be copied without subsetting\n");
+
+        if !Path::new("static/build").exists() {
+            fs::create_dir_all("static/build")?;
+        }
+
+        let fonts_list = [
+            (fonts::REGULAR_FONT_SRC, fonts::REGULAR_FONT_TTF_OUT),
+            (fonts::SEMIBOLD_FONT_SRC, fonts::SEMIBOLD_FONT_TTF_OUT),
+            (fonts::BOLD_FONT_SRC, fonts::BOLD_FONT_TTF_OUT),
+        ];
+
+        for (src, dst) in fonts_list {
+            fs::copy(src, dst)?;
+            log.push_str(&format!("copied {src} to {dst}\n"));
         }
     }
 
