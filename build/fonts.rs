@@ -22,7 +22,7 @@ const TEXT_SOURCES: &[&str] = &[
     "src/components.rs",        // top/profile/blog chrome
     "src/components/search.rs", // search page strings
     "static/app.js",            // UI strings in client JS
-    "static/preamble.typ",      // preamble for typst
+    "content/_preamble.typ",    // preamble for typst
 ];
 
 /// Additional characters to include in Bold font subset (beyond H1 headings)
@@ -202,7 +202,8 @@ fn subset_font(src: &str, ttf_out: &str, woff2_out: &str, glyphs: &BTreeSet<char
     {
         // hb-subset は使えない
         if !Path::new("static/build").exists() {
-            fs::create_dir("static/build").with_context(|| "failed to create directory static/build")?;
+            fs::create_dir("static/build")
+                .with_context(|| "failed to create directory static/build")?;
         }
         fs::copy(src, ttf_out).with_context(|| format!("failed to copy {} to {}", src, ttf_out))?;
         let _ = glyphs; // suppress unused warning

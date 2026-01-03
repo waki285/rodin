@@ -6,10 +6,6 @@ edition = "2021"
 build = "build.rs"
 default-run = "rodin"
 
-[[bin]]
-name = "rodin-content"
-path = "src/bin/rodin_content.rs"
-
 [dependencies]
 anyhow = "1.0.100"
 axum = "0.8.7"
@@ -94,3 +90,9 @@ lto = true
 opt-level = 3
 codegen-units = 1
 strip = "symbols"
+
+[lints.rust]
+unfulfilled_lint_expectations = "deny"
+
+[lints.clippy]
+allow_attributes = "deny" # Use #[expect(lint_name)] instead

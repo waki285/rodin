@@ -226,7 +226,6 @@ pub(crate) fn prerender_blog_page(meta: &FrontMatter, html_content: &str) -> Str
         } else {
             Vec::new()
         },
-        ..Default::default()
     };
 
     maybe_minify(wrap_html_with_options(&rendered, &page_title, &opts))
@@ -412,7 +411,10 @@ pub(crate) fn render_contact_page(
 
     let mut meta = HashMap::new();
     meta.insert("link:canonical".to_string(), format!("{SITE_URL}/contact"));
-    meta.insert("description".to_string(), "お問い合わせフォーム".to_string());
+    meta.insert(
+        "description".to_string(),
+        "お問い合わせフォーム".to_string(),
+    );
 
     let hcaptcha_script = format!(
         r#"<script src="https://js.hcaptcha.com/1/api.js" async defer nonce="{CSP_NONCE_TOKEN}"></script>"#

@@ -11,7 +11,7 @@ mod posts;
 #[path = "../build/sitemap.rs"]
 mod sitemap;
 
-const PREAMBLE_PATH: &str = "static/preamble.typ";
+const PREAMBLE_PATH: &str = "content/_preamble.typ";
 const GENERATED_DIR: &str = "static/generated";
 const GENERATED_MD_DIR: &str = "static/generated/md";
 const PANDOC_FILTER: &str = "scripts/pandoc/html-to-md.lua";
@@ -235,7 +235,7 @@ fn push_to_opensearch(metas: &[FrontMatter], cfg: &OpenSearchCfg) -> anyhow::Res
             "{{\"index\":{{\"_index\":\"{}\",\"_id\":\"{}\"}}}}\n{}\n",
             cfg.index,
             m.slug,
-            doc.to_string()
+            doc
         ));
     }
 

@@ -66,18 +66,18 @@ pub fn build_posts(preamble_path: &str, generated_dir: &str) -> Result<Vec<Front
             if let Some(title) = &meta.title {
                 let date = meta.published_at.as_deref().unwrap_or("");
                 let updated = meta.updated_at.as_deref().unwrap_or("");
-                
-                // descriptions truncation (e.g. 60 chars)
-                let description = if meta.meta.get("description").is_some() {
+
+                // descriptions truncation
+                let description = if meta.meta.contains_key("description") {
                     let mut s: String = meta.meta.get("description").unwrap().chars().take(60).collect();
-                    if s.len() == 60 {
+                    if s.len() >= 59 {
                         s.push_str("...");
                     }
                     s
                 } else {
                     meta.meta.get("description").unwrap_or(&"".to_string()).to_string()
                 };
-                
+
                 let og_source = format!(
                     "#show: generate_og.with(title: \"{}\", author: \"{}\", date: \"{}\", updated: \"{}\", description: \"{}\")",
                     title.replace('"', "\\\""),
@@ -135,7 +135,9 @@ fn generate_og_image(
     // Load custom font
     let font_path = PathBuf::from("static/fonts/IBMPlexSansJP-Bold.ttf");
     let font_data: Vec<typst::foundations::Bytes> = if font_path.exists() {
-        vec![typst::foundations::Bytes::new(std::fs::read(&font_path).unwrap())]
+        vec![typst::foundations::Bytes::new(
+            std::fs::read(&font_path).unwrap(),
+        )]
     } else {
         vec![]
     };
@@ -345,7 +347,7 @@ fn parse_front_matter(slug: &str, source: &str) -> (FrontMatter, String) {
             .or_insert_with(|| title.clone());
     }
 
-     meta_map
+    meta_map
         .entry("author".to_string())
         .or_insert_with(|| crate::constants::AUTHOR_NAME.to_string());
     meta_map
@@ -490,20 +492,25 @@ fn load_binary_assets() -> Result<Vec<(String, Vec<u8>)>> {
         }
     }
 
-    let other_assets = vec![
+    let github_light = include_bytes!("../static/github-light.tmTheme").to_vec();
+    let github_dark = include_bytes!("../static/github-dark.tmTheme").to_vec();
+
+    let theme_variants = [
+        ("github-light.tmTheme".to_string(), github_light.clone()),
         (
-            "github-light.tmTheme".to_string(),
-            include_bytes!("../static/github-light.tmTheme").to_vec(),
+            "../static/github-light.tmTheme".to_string(),
+            github_light.clone(),
         ),
+        ("static/github-light.tmTheme".to_string(), github_light),
+        ("github-dark.tmTheme".to_string(), github_dark.clone()),
         (
-            "github-dark.tmTheme".to_string(),
-            include_bytes!("../static/github-dark.tmTheme").to_vec(),
+            "../static/github-dark.tmTheme".to_string(),
+            github_dark.clone(),
         ),
+        ("static/github-dark.tmTheme".to_string(), github_dark),
     ];
 
-    bins.extend(other_assets);
-
-
+    bins.extend(theme_variants);
 
     let gen_index = PathBuf::from("static/generated/index.json");
     if gen_index.exists() {

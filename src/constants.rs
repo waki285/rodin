@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 pub const SITE_URL: &str = "https://suzuneu.com";
 pub const SITE_NAME: &str = "すずねーうのウェブサイト";
 pub const SITE_TITLE_POSTFIX: &str = "｜すずねーう";

@@ -664,9 +664,7 @@ fn ShowSubtitle(text: String) -> impl IntoView {
 
 #[component]
 fn ShareButtons(title: String, slug: Option<String>) -> impl IntoView {
-    let Some(slug) = slug else {
-        return None::<View<_>>;
-    };
+    let slug = slug?;
 
     let safe_title = if title.is_empty() {
         crate::constants::SITE_NAME.to_string()

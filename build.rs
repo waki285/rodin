@@ -15,7 +15,7 @@ mod posts;
 #[path = "build/sitemap.rs"]
 mod sitemap;
 
-const PREAMBLE_PATH: &str = "static/preamble.typ";
+const PREAMBLE_PATH: &str = "content/_preamble.typ";
 const GENERATED_DIR: &str = "static/generated";
 const GENERATED_MD_DIR: &str = "static/generated/md";
 const PANDOC_FILTER: &str = "scripts/pandoc/html-to-md.lua";
@@ -48,7 +48,6 @@ fn main() -> Result<()> {
     println!("cargo:rerun-if-changed=static/app.js");
     println!("cargo:rerun-if-changed=static/home.js");
     println!("cargo:rerun-if-changed=static/css");
-    println!("cargo:rerun-if-changed={PREAMBLE_PATH}");
     println!("cargo:rerun-if-changed={PANDOC_FILTER}");
 
     println!("cargo:rustc-env={MARKDOWN_ENV_KEY}=false");

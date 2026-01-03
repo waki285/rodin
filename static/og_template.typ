@@ -24,41 +24,54 @@
     fill: white,
     radius: 20pt,
     stroke: none,
-    inset: 60pt,
+    inset: (x: 60pt, y: 50pt),
   )[
-    #set align(left + horizon)
+    #set align(left + top)
     #set text(font: ("IBM Plex Sans JP"), fill: rgb("#333333"))
     
-    // Title
-    #block(width: 100%, spacing: 3em)[
-      #text(size: 64pt, weight: "bold")[#title]
-    ]
-
-    // Description (if available)
-    #if description != "" {
-      block(width: 100%, spacing: 1em)[
-        #text(size: 32pt, weight: "regular", fill: rgb("#666666"))[#description]
-      ]
+    // タイトルの長さに応じてフォントサイズを調整
+    #let title-size = if title.len() > 40 {
+      48pt
+    } else if title.len() > 25 {
+      56pt
+    } else {
+      64pt
     }
     
-    // Footer (Author info)
+    // Title - 上に詰める
+    #block(width: 100%, spacing: 0pt)[
+      #text(size: title-size, weight: "bold")[#title]
+    ]
+    
+    #v(30pt)
+
+    // Description (if available)
+    #block(width: 100%, spacing: 0pt)[
+      #if description != "" {
+        text(size: 28pt, weight: "regular", fill: rgb("#666666"))[#description]
+      }
+    ]
+    
+    // 余白
     #v(1fr)
+    
+    // Footer (Author info) - 固定位置
     #stack(dir: ltr, spacing: 20pt,
       box(width: 80pt, height: 80pt, radius: 40pt, clip: true, image(icon, width: 100%, height: 100%)),
       align(horizon, text(size: 32pt, fill: rgb("#555555"), weight: "medium")[
         #author
       ]),
       h(1fr),
-      align(horizon, text(size: 32pt, fill: rgb("#999999"), weight: "bold")[
+      align(horizon, text(size: 28pt, fill: rgb("#999999"), weight: "bold")[
         // Display dates if available
-        #if updated != none {
+        #if updated != none and updated != "" {
           // Check if updated is different/present
           if updated != date {
             [Updated: #updated]
           } else {
             [Published: #date]
           }
-        } else if date != none {
+        } else if date != none and date != "" {
           [Published: #date]
         }
       ])

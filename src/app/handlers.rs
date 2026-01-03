@@ -235,7 +235,7 @@ pub async fn blog_list_handler(
     posts.sort_by(|a, b| b.published_at.cmp(&a.published_at));
 
     let total = posts.len();
-    let total_pages = (total + POSTS_PER_PAGE - 1) / POSTS_PER_PAGE;
+    let total_pages = total.div_ceil(POSTS_PER_PAGE);
     let start = (page - 1) * POSTS_PER_PAGE;
     let page_posts: Vec<_> = posts.into_iter().skip(start).take(POSTS_PER_PAGE).collect();
 
@@ -548,7 +548,7 @@ pub async fn rss_handler(State(state): State<SharedAppState>) -> Response {
         let desc = entry
             .description
             .as_deref()
-            .unwrap_or_else(|| entry.title.as_str());
+            .unwrap_or(entry.title.as_str());
         let pub_date = entry
             .published_at
             .as_deref()
@@ -728,18 +728,18 @@ pub async fn contact_submit_handler(
 struct HcaptchaVerifyResponse {
     success: bool,
     #[serde(default)]
+    #[expect(dead_code)]
     score: Option<f64>,
     #[serde(rename = "error-codes", default)]
+    #[expect(dead_code)]
     error_codes: Vec<String>,
 }
 
 async fn verify_hcaptcha(token: &str, client_ip: &str) -> Result<bool> {
-    let secret = env::var("HCAPTCHA_SECRET")
-        .map_err(|_| anyhow::anyhow!("HCAPTCHA_SECRET is not set"))?;
+    let secret =
+        env::var("HCAPTCHA_SECRET").map_err(|_| anyhow::anyhow!("HCAPTCHA_SECRET is not set"))?;
 
-    let client = Client::builder()
-        .user_agent("rodin-contact/1.0")
-        .build()?;
+    let client = Client::builder().user_agent("rodin-contact/1.0").build()?;
 
     let resp = client
         .post("https://hcaptcha.com/siteverify")
@@ -766,7 +766,7 @@ async fn send_discord_webhook(payload: &ContactFormPayload, client_ip: &str) -> 
     let mut message = payload.message.trim().to_string();
     if message.len() > 1500 {
         message.truncate(1500);
-        message.push_str("…");
+        message.push('…');
     }
 
     let content = format!(
@@ -778,9 +778,7 @@ async fn send_discord_webhook(payload: &ContactFormPayload, client_ip: &str) -> 
         message
     );
 
-    let client = Client::builder()
-        .user_agent("rodin-contact/1.0")
-        .build()?;
+    let client = Client::builder().user_agent("rodin-contact/1.0").build()?;
 
     let resp = client
         .post(webhook_url)

@@ -4,10 +4,11 @@ use lightningcss::targets::{Browsers, Targets};
 use regex::Regex;
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use std::path::Path;
 use std::{collections::HashMap, fs, path::PathBuf, process::Command};
 
 /// Minify a JavaScript file with esbuild and return the minified content
-fn minify_js(src_path: &PathBuf) -> Result<String> {
+fn minify_js(src_path: &Path) -> Result<String> {
     let tmp_dst = src_path.with_extension("js.tmp");
 
     #[cfg(target_os = "windows")]
@@ -61,8 +62,8 @@ fn minify_js(src_path: &PathBuf) -> Result<String> {
 
 /// Minify a JS file, hash it, write to out_dir, and return the hashed filename
 fn process_js_file(
-    src_path: &PathBuf,
-    out_dir: &PathBuf,
+    src_path: &Path,
+    out_dir: &Path,
     stem: &str,
     manifest_key: &str,
     manifest: &mut HashMap<String, String>,

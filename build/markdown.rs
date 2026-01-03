@@ -1,8 +1,7 @@
 use crate::frontmatter::FrontMatter;
 use anyhow::Result;
 use std::{
-    env,
-    fs,
+    env, fs,
     path::{Path, PathBuf},
     process::Command,
 };

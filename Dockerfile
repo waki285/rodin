@@ -76,7 +76,6 @@ RUN apt-get update && \
 WORKDIR /app
 
 COPY --from=builder /app/target/release/rodin /app/rodin
-COPY --from=builder /app/target/release/rodin-content /app/rodin-content
 COPY --from=builder /app/static /app/static
 COPY --from=builder /app/scripts /app/scripts
 
