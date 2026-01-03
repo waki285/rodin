@@ -3,6 +3,7 @@ mod app;
 mod asset;
 mod components;
 pub mod constants;
+mod fonts;
 mod frontmatter;
 mod logging;
 

@@ -1,7 +1,7 @@
+use crate::fonts;
 use crate::frontmatter::FrontMatter;
 use regex::Regex;
 use reqwest::blocking::Client;
-use rodin::fonts;
 use serde_json::json;
 use std::{env, process::Command, time::Duration};
 
@@ -332,7 +332,10 @@ pub fn run_font_subset() -> anyhow::Result<String> {
             "collected {} glyphs for regular/semibold fonts\n",
             glyphs.len()
         ));
-        log.push_str(&format!("collected {} glyphs for bold font\n", bold_glyphs.len()));
+        log.push_str(&format!(
+            "collected {} glyphs for bold font\n",
+            bold_glyphs.len()
+        ));
 
         // Subset fonts
         log.push_str(&format!("subsetting {}...\n", fonts::SEMIBOLD_FONT_SRC));
@@ -372,14 +375,28 @@ pub fn run_font_subset() -> anyhow::Result<String> {
         }
 
         let fonts_list = [
-            (fonts::REGULAR_FONT_SRC, fonts::REGULAR_FONT_TTF_OUT),
-            (fonts::SEMIBOLD_FONT_SRC, fonts::SEMIBOLD_FONT_TTF_OUT),
-            (fonts::BOLD_FONT_SRC, fonts::BOLD_FONT_TTF_OUT),
+            (
+                fonts::REGULAR_FONT_SRC,
+                fonts::REGULAR_FONT_TTF_OUT,
+                fonts::REGULAR_FONT_WOFF2_OUT,
+            ),
+            (
+                fonts::SEMIBOLD_FONT_SRC,
+                fonts::SEMIBOLD_FONT_TTF_OUT,
+                fonts::SEMIBOLD_FONT_WOFF2_OUT,
+            ),
+            (
+                fonts::BOLD_FONT_SRC,
+                fonts::BOLD_FONT_TTF_OUT,
+                fonts::BOLD_FONT_WOFF2_OUT,
+            ),
         ];
 
-        for (src, dst) in fonts_list {
-            fs::copy(src, dst)?;
-            log.push_str(&format!("copied {src} to {dst}\n"));
+        for (src, ttf_dst, woff2_dst) in fonts_list {
+            fs::copy(src, ttf_dst)?;
+            fonts::compress_to_woff2(ttf_dst, woff2_dst)?;
+            log.push_str(&format!("copied {src} to {ttf_dst}\n"));
+            log.push_str(&format!("created {woff2_dst}\n"));
         }
     }
 

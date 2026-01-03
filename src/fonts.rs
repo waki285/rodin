@@ -1,0 +1,213 @@
+pub const REGULAR_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-Regular.ttf";
+pub const SEMIBOLD_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-SemiBold.ttf";
+pub const BOLD_FONT_SRC: &str = "static/fonts/IBMPlexSansJP-Bold.ttf";
+
+pub const REGULAR_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Regular.subset.ttf";
+pub const REGULAR_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Regular.subset.woff2";
+pub const SEMIBOLD_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Semibold.subset.ttf";
+pub const SEMIBOLD_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Semibold.subset.woff2";
+pub const BOLD_FONT_TTF_OUT: &str = "static/build/IBMPlexSansJP-Bold.subset.ttf";
+pub const BOLD_FONT_WOFF2_OUT: &str = "static/build/IBMPlexSansJP-Bold.subset.woff2";
+
+#[cfg(not(windows))]
+mod subset {
+    use anyhow::{Context, Result};
+    use std::{
+        collections::BTreeSet,
+        fs,
+        path::{Path, PathBuf},
+    };
+
+    pub const TEXT_SOURCES: &[&str] = &[
+        "src/app/handlers.rs",      // not_found_response HTML
+        "src/components.rs",        // top/profile/blog chrome
+        "src/components/search.rs", // search page strings
+        "static/app.js",            // UI strings in client JS
+        "content/_preamble.typ",    // preamble for typst
+    ];
+
+    /// Additional characters to include in Bold font subset (beyond H1 headings)
+    /// These are characters used with font-weight: 700 in critical UI elements
+    const BOLD_EXTRA_CHARS: &str = "すずねーう目次プロフィール検索結果件見つかりました";
+
+    pub fn collect_glyphs() -> Result<BTreeSet<char>> {
+        let mut set = BTreeSet::new();
+
+        for path in TEXT_SOURCES {
+            collect_from_file(path, &mut set)?;
+        }
+        collect_from_content_dir("content", &mut set)?;
+
+        set.insert(' ');
+        set.insert('\u{00A0}'); // non-breaking space
+
+        // Additional characters not in source files
+        for ch in "技術".chars() {
+            set.insert(ch);
+        }
+
+        Ok(set)
+    }
+
+    /// Collect minimal glyphs for Bold font:
+    /// - Characters from `= ` lines (H1 headings) in .typ files
+    /// - Extra characters defined in BOLD_EXTRA_CHARS
+    pub fn collect_bold_glyphs() -> Result<BTreeSet<char>> {
+        let mut set = BTreeSet::new();
+
+        // Add extra characters for Bold font
+        for ch in BOLD_EXTRA_CHARS.chars() {
+            set.insert(ch);
+        }
+
+        // Collect H1 headings from .typ files
+        collect_h1_headings_from_dir("content", &mut set)?;
+
+        // Add basic punctuation and spaces
+        set.insert(' ');
+        set.insert('\u{00A0}'); // non-breaking space
+
+        Ok(set)
+    }
+
+    /// Extract characters from `= ` lines (H1 headings) in Typst files
+    fn collect_h1_headings_from_dir(dir: &str, set: &mut BTreeSet<char>) -> Result<()> {
+        for entry in fs::read_dir(dir).with_context(|| format!("reading directory {dir}"))? {
+            let entry = entry?;
+            let path = entry.path();
+            if entry.file_type()?.is_file() && path.extension().is_some_and(|ext| ext == "typ") {
+                collect_h1_headings_from_file(&path, set)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Extract characters from lines starting with `= ` (H1 heading in Typst)
+    fn collect_h1_headings_from_file(
+        path: impl AsRef<Path>,
+        set: &mut BTreeSet<char>,
+    ) -> Result<()> {
+        let path_ref = path.as_ref();
+        let content = fs::read_to_string(path_ref)
+            .with_context(|| format!("failed to read {}", path_ref.display()))?;
+
+        for line in content.lines() {
+            let trimmed = line.trim_start();
+            // Match `= ` at the start of line (H1 heading in Typst)
+            if let Some(heading) = trimmed.strip_prefix("= ") {
+                for ch in heading.chars() {
+                    if !ch.is_control() {
+                        set.insert(ch);
+                    }
+                }
+            }
+            // Match `//: title: ` frontmatter (article title displayed as H1)
+            if let Some(title) = trimmed.strip_prefix("//: title:") {
+                for ch in title.trim().chars() {
+                    if !ch.is_control() {
+                        set.insert(ch);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn collect_from_content_dir(dir: &str, set: &mut BTreeSet<char>) -> Result<()> {
+        for entry in fs::read_dir(dir).with_context(|| format!("reading directory {dir}"))? {
+            let entry = entry?;
+            let path = entry.path();
+            if entry.file_type()?.is_file() && path.extension().is_some_and(|ext| ext == "typ") {
+                collect_from_file(&path, set)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn collect_from_file(path: impl AsRef<Path>, set: &mut BTreeSet<char>) -> Result<()> {
+        let path_ref = path.as_ref();
+        let content = fs::read_to_string(path_ref)
+            .with_context(|| format!("failed to read glyph source {}", path_ref.display()))?;
+        for ch in content.chars() {
+            if ch.is_control() && ch != '\n' && ch != '\t' {
+                continue;
+            }
+            set.insert(ch);
+        }
+        Ok(())
+    }
+
+    fn write_if_changed(path: &str, data: &[u8]) -> Result<()> {
+        let dst = PathBuf::from(path);
+        if let Some(parent) = dst.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create directory {}", parent.display()))?;
+        }
+        let need_write = match fs::read(&dst) {
+            Ok(existing) => existing != data,
+            Err(_) => true,
+        };
+        if need_write {
+            fs::write(&dst, data).with_context(|| format!("failed to write {}", dst.display()))?;
+        }
+        Ok(())
+    }
+
+    pub fn subset_font(
+        src: &str,
+        ttf_out: &str,
+        woff2_out: &str,
+        glyphs: &BTreeSet<char>,
+    ) -> Result<()> {
+        let font = fs::read(src).with_context(|| format!("failed to read {}", src))?;
+        let subset = hb_subset::subset(&font, glyphs.iter().copied())
+            .with_context(|| format!("hb-subset failed for {}", src))?;
+        write_if_changed(ttf_out, &subset)?;
+
+        super::compress_to_woff2(ttf_out, woff2_out)
+    }
+}
+
+#[cfg(not(windows))]
+pub use subset::{collect_bold_glyphs, collect_glyphs, subset_font, TEXT_SOURCES};
+
+use anyhow::{Context, Result};
+use std::{fs, path::PathBuf, process::Command};
+
+pub(crate) fn compress_to_woff2(ttf_path: &str, woff2_path: &str) -> Result<()> {
+    let ttf = PathBuf::from(ttf_path);
+    if let Some(parent) = ttf.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create directory {}", parent.display()))?;
+    }
+
+    let status = Command::new("woff2_compress")
+        .arg(&ttf)
+        .status()
+        .with_context(|| {
+            "failed to spawn woff2_compress (install woff2 and ensure it is in PATH)"
+        })?;
+    if !status.success() {
+        anyhow::bail!("woff2_compress exited with {}", status);
+    }
+
+    let produced = ttf.with_extension("woff2");
+    if !produced.exists() {
+        anyhow::bail!("woff2_compress did not produce {}", produced.display());
+    }
+    let target = PathBuf::from(woff2_path);
+    if produced != target {
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create directory {}", parent.display()))?;
+        }
+        fs::rename(&produced, &target).with_context(|| {
+            format!(
+                "failed to move {} to {}",
+                produced.display(),
+                target.display()
+            )
+        })?;
+    }
+    Ok(())
+}

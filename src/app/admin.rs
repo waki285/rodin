@@ -570,14 +570,12 @@ pub async fn admin_run_handler(
         },
     };
 
-    if res.success {
-        if state::reload_state(&shared).await.is_err() {
-            return Ok(axum::Json(AdminRunResp {
-                log: res.log,
-                success: false,
-                error: Some("Failed to reload state".to_string()),
-            }));
-        }
+    if res.success && state::reload_state(&shared).await.is_err() {
+        return Ok(axum::Json(AdminRunResp {
+            log: res.log,
+            success: false,
+            error: Some("Failed to reload state".to_string()),
+        }));
     }
 
     Ok(axum::Json(res))
