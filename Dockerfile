@@ -70,7 +70,7 @@ RUN --mount=type=cache,target=/sccache,sharing=locked cargo build --release
 FROM debian:trixie-slim AS runtime
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates git curl jq pandoc && \
+    apt-get install -y --no-install-recommends ca-certificates git curl jq pandoc libharfbuzz-dev && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
