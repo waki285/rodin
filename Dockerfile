@@ -12,8 +12,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # sccache
-RUN curl -L https://github.com/mozilla/sccache/releases/latest/download/sccache-v0.12.0-x86_64-unknown-linux-musl.tar.gz \
-    | tar xz && mv sccache-v0.12.0-x86_64-unknown-linux-musl/sccache /usr/local/bin/ && rm -rf sccache-v0.12.0-x86_64-unknown-linux-musl
+RUN curl -L https://github.com/mozilla/sccache/releases/latest/download/sccache-v0.13.0-x86_64-unknown-linux-musl.tar.gz \
+    | tar xz && mv sccache-v0.13.0-x86_64-unknown-linux-musl/sccache /usr/local/bin/ && rm -rf sccache-v0.13.0-x86_64-unknown-linux-musl
 
 # pnpm (lockfile matches repo)
 RUN corepack enable && corepack prepare pnpm@10.24.0 --activate
@@ -32,7 +32,7 @@ RUN curl -L https://github.com/LukeMathWalker/cargo-chef/releases/download/v0.1.
 # Planner: analyze dependencies
 ########################################
 FROM builder-base AS planner
-COPY Cargo.toml Cargo.lock build.rs ./ 
+COPY Cargo.toml Cargo.lock build.rs ./
 COPY src src
 COPY build build
 COPY scripts scripts
@@ -54,7 +54,7 @@ FROM builder-base AS builder
 COPY --from=cook /app/target /app/target
 
 # JS deps first for cache friendliness
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./ 
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # Copy full source
