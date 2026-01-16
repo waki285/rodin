@@ -1,2 +1,4 @@
-私、すずねーう (Waki285) は、鍵 6C257F617B640D5A, 45650A6B563479A3, CC4F77CEA9F964E5 が私の鍵であると宣言します。
-I, すずねーう (Waki285), declare that key 6C257F617B640D5A, 45650A6B563479A3, CC4F77CEA9F964E5 is my key.
+私、すずねーう (Waki285) は、鍵 858AD3EF07B0B1E4, 15B3D36DB39AFE82 が私の鍵であると宣言します。
+なお、鍵 6C257F617B640D5A, 45650A6B563479A3, CC4F77CEA9F964E5 は、以前まで私の鍵として使用していましたが、侵害の疑いにより失効したことを宣言します。
+I, すずねーう (Waki285), hereby declare that the keys 858AD3EF07B0B1E4 and 15B3D36DB39AFE82 are my keys.
+Furthermore, I declare that keys 6C257F617B640D5A, 45650A6B563479A3, and CC4F77CEA9F964E5, which I previously used as my keys, are now revoked due to suspected compromise.
