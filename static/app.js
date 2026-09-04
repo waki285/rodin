@@ -30,6 +30,56 @@
   const safeHTML = (html) => (trustedPolicy ? trustedPolicy.createHTML(html) : html);
 
   // ============================================
+  // SPA Loading Progress
+  // ============================================
+  const SpaProgress = (() => {
+    let state = "idle";
+    let hideTimer;
+
+    const ensureElement = () => {
+      let element = document.getElementById("spa-progress");
+      if (element || !document.body) return element;
+
+      element = document.createElement("div");
+      element.id = "spa-progress";
+      element.className = "spa-progress";
+      element.setAttribute("aria-hidden", "true");
+
+      const indicator = document.createElement("span");
+      indicator.className = "spa-progress__bar";
+      element.appendChild(indicator);
+      document.body.prepend(element);
+      return element;
+    };
+
+    const render = () => {
+      const element = ensureElement();
+      if (!element) return;
+
+      element.dataset.state = state;
+      element.setAttribute("aria-hidden", state === "idle" ? "true" : "false");
+    };
+
+    const start = () => {
+      clearTimeout(hideTimer);
+      state = "loading";
+      render();
+    };
+
+    const finish = () => {
+      state = "complete";
+      render();
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        state = "idle";
+        render();
+      }, 180);
+    };
+
+    return { ensure: render, start, finish };
+  })();
+
+  // ============================================
   // Client-side Router (Next.js/Qwik style)
   // ============================================
   const Router = (() => {
@@ -38,6 +88,17 @@
     const prefetching = new Set();
     let isNavigating = false;
     const scrollPositions = new Map(); // key -> { x, y }
+
+    const getConnection = () =>
+      navigator.connection ?? navigator.mozConnection ?? navigator.webkitConnection;
+
+    const canPrefetch = () => {
+      const connection = getConnection();
+      if (connection?.saveData === true) return false;
+
+      const effectiveType = connection?.effectiveType;
+      return effectiveType !== "slow-2g" && effectiveType !== "2g";
+    };
 
     let lastPathname = location.pathname + location.search;
     let currentScrollKey = location.href + "-" + Date.now(); // 現在のページのscrollKey
@@ -110,7 +171,7 @@
 
     // Prefetch a URL (low priority)
     const prefetch = async (url) => {
-      if (cache.has(url) || prefetching.has(url)) return;
+      if (!canPrefetch() || cache.has(url) || prefetching.has(url)) return;
       prefetching.add(url);
       try {
         await fetchPage(url);
@@ -189,6 +250,7 @@
 
       // Swap body content
       document.body.innerHTML = safeHTML(entry.html);
+      SpaProgress.ensure();
 
       // Load page-specific scripts after DOM update
       await ensureScripts(entry.scripts || []);
@@ -222,6 +284,7 @@
       if (pushState && url === location.href) return;
 
       isNavigating = true;
+      SpaProgress.start();
 
       try {
         const entry = await fetchPage(url);
@@ -252,6 +315,7 @@
         location.href = url;
       } finally {
         isNavigating = false;
+        SpaProgress.finish();
       }
     };
 
@@ -328,6 +392,8 @@
 
     // Initialize router
     const init = () => {
+      SpaProgress.ensure();
+
       // Store initial state with scroll key
       const initialScrollKey = location.href + "-" + Date.now();
       history.replaceState({ url: location.href, scrollKey: initialScrollKey }, "", location.href);
