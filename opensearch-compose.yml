@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: opensearch.Dockerfile
-    image: rodin-opensearch:3.3.2
+    image: rodin-opensearch:3.8.0
     environment:
       - discovery.type=single-node
       - bootstrap.memory_lock=true

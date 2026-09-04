@@ -5,8 +5,8 @@ use axum::{
     response::{Html, IntoResponse, Response},
 };
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-use hmac::{Hmac, Mac};
-use rand::Rng;
+use hmac::{Hmac, KeyInit, Mac};
+use rand::RngExt;
 use std::{collections::HashMap, env, net::SocketAddr, sync::LazyLock};
 use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;

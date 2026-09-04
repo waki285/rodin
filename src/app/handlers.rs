@@ -932,7 +932,7 @@ pub async fn security_middleware(mut req: Request<Body>, next: Next) -> Response
 
 #[inline]
 fn generate_nonce() -> String {
-    use rand::Rng;
+    use rand::RngExt;
     let charset = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let mut rng = rand::rng();
     (0..16)
