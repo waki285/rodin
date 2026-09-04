@@ -497,16 +497,8 @@ fn load_binary_assets() -> Result<Vec<(String, Vec<u8>)>> {
 
     let theme_variants = [
         ("github-light.tmTheme".to_string(), github_light.clone()),
-        (
-            "../static/github-light.tmTheme".to_string(),
-            github_light.clone(),
-        ),
         ("static/github-light.tmTheme".to_string(), github_light),
         ("github-dark.tmTheme".to_string(), github_dark.clone()),
-        (
-            "../static/github-dark.tmTheme".to_string(),
-            github_dark.clone(),
-        ),
         ("static/github-dark.tmTheme".to_string(), github_dark),
     ];
 
