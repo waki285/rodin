@@ -18,7 +18,7 @@ image = "0.25.9"
 itertools = "0.14.0"
 leptos = { version = "0.8.20", default-features = false, features = ["ssr"] }
 minify-html = "0.18.1"
-rand = "0.9.2"
+rand = "0.10.0"
 rayon = "1.11"
 regex = "1.11"
 reqwest = { version = "0.13", default-features = false, features = [
