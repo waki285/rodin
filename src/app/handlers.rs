@@ -2,7 +2,7 @@ use anyhow::Result;
 use axum::{
     body::Body,
     extract::{ConnectInfo, Extension, Json, Path, Query, State},
-    http::{header, HeaderMap, HeaderValue, Request, StatusCode},
+    http::{HeaderMap, HeaderValue, Request, StatusCode, header},
     middleware::Next,
     response::{Html, IntoResponse, Redirect, Response},
 };
@@ -18,11 +18,11 @@ use std::{
 
 use super::{
     markdown_enabled,
-    render::{inject_runtime_tokens, SITE_URL},
+    render::{SITE_URL, inject_runtime_tokens},
     state::{self, AppState, SharedAppState},
 };
 use crate::app::{
-    render::{render_search_page, render_tag_page, BlogListItem, SearchHit},
+    render::{BlogListItem, SearchHit, render_search_page, render_tag_page},
     state::SearchIndexEntry,
 };
 
@@ -490,22 +490,21 @@ fn client_ip_from_headers(headers: &HeaderMap) -> Option<String> {
     if !*TRUST_PROXY_ENABLED {
         return None;
     }
-    if let Some(val) = headers.get("CF-Connecting-IP") {
-        if let Ok(s) = val.to_str() {
-            let trimmed = s.trim();
-            if !trimmed.is_empty() {
-                return Some(trimmed.to_string());
-            }
+    if let Some(val) = headers.get("CF-Connecting-IP")
+        && let Ok(s) = val.to_str()
+    {
+        let trimmed = s.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_string());
         }
     }
-    if let Some(val) = headers.get("X-Forwarded-For") {
-        if let Ok(s) = val.to_str() {
-            if let Some(first) = s.split(',').next() {
-                let ip = first.trim();
-                if !ip.is_empty() {
-                    return Some(ip.to_string());
-                }
-            }
+    if let Some(val) = headers.get("X-Forwarded-For")
+        && let Ok(s) = val.to_str()
+        && let Some(first) = s.split(',').next()
+    {
+        let ip = first.trim();
+        if !ip.is_empty() {
+            return Some(ip.to_string());
         }
     }
     None

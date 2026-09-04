@@ -1,15 +1,15 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use image::ImageEncoder;
 use itertools::Itertools;
 #[cfg(not(debug_assertions))]
-use minify_html::{minify, Cfg as HtmlMinCfg};
+use minify_html::{Cfg as HtmlMinCfg, minify};
 use rayon::prelude::*;
 use regex::Regex;
 use std::{collections::HashMap, fs, path::PathBuf, sync::LazyLock};
-use typst_as_lib::{typst_kit_options::TypstKitFontOptions, TypstEngine};
+use typst_as_lib::{TypstEngine, typst_kit_options::TypstKitFontOptions};
 use typst_html::HtmlDocument;
 use typst_library::diag::SourceDiagnostic;
-use typst_render::render;
+use typst_render::{RenderOptions, render};
 
 use crate::frontmatter::FrontMatter;
 
@@ -155,17 +155,17 @@ fn generate_og_image(
         .build();
 
     let doc = engine
-        .compile::<typst::layout::PagedDocument>()
+        .compile::<typst_layout::PagedDocument>()
         .output
         .map_err(|e| anyhow!("Typst compile error: {e:?}"))?;
 
     let page = doc
-        .pages
+        .pages()
         .first()
         .ok_or_else(|| anyhow!("No pages generated"))?;
 
-    // 2.0 scale for high DPI
-    let pixmap = render(page, 2.0);
+    // RenderOptions::default() renders at 2.0 pixels per point for high DPI
+    let pixmap = render(page, &RenderOptions::default());
 
     let mut png_data = Vec::new();
     // Use fast encoder
@@ -206,7 +206,7 @@ pub fn build_home(preamble_path: &str, generated_dir: &str) -> Result<()> {
     let mut html = compile_typst(&preamble, &injected, &binaries)?;
     html = html.replace(
         "<p>POSTS_LIST_PLACEHOLDER</p>",
-        &format!("<div class=\"posts-list\">{}</div>", &cards_html),
+        &format!("<div class=\"posts-list\">{}</div>", cards_html),
     );
 
     let html_path = out_dir.join("home.html");
@@ -366,15 +366,15 @@ fn parse_front_matter(slug: &str, source: &str) -> (FrontMatter, String) {
         .entry("og:type".to_string())
         .or_insert_with(|| "article".to_string());
 
-    if !meta_map.contains_key("article:published_time") {
-        if let Some(date) = fm.published_at.as_ref() {
-            let derived = if date.contains('T') {
-                date.clone()
-            } else {
-                format!("{date}T00:00:00.000Z")
-            };
-            meta_map.insert("article:published_time".to_string(), derived);
-        }
+    if !meta_map.contains_key("article:published_time")
+        && let Some(date) = fm.published_at.as_ref()
+    {
+        let derived = if date.contains('T') {
+            date.clone()
+        } else {
+            format!("{date}T00:00:00.000Z")
+        };
+        meta_map.insert("article:published_time".to_string(), derived);
     }
 
     if !meta_map.is_empty() {
@@ -412,7 +412,8 @@ fn compile_typst(
         }
     }
     let doc = result.output.map_err(|e| anyhow!(e.to_string()))?;
-    let html = typst_html::html(&doc).map_err(|diags| anyhow!(format_diagnostics(&diags)))?;
+    let html = typst_html::html(&doc, &Default::default())
+        .map_err(|diags| anyhow!(format_diagnostics(&diags)))?;
     Ok(postprocess_typst_html(&html))
 }
 
@@ -468,25 +469,24 @@ fn load_binary_assets() -> Result<Vec<(String, Vec<u8>)>> {
         for entry in fs::read_dir(&images_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file() {
-                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                    if matches!(
-                        ext.to_lowercase().as_str(),
-                        "png" | "jpg" | "jpeg" | "svg" | "gif" | "webp"
-                    ) {
-                        let bytes = Arc::new(fs::read(&path)?);
-                        let fname = path.file_name().unwrap().to_string_lossy().to_string();
-                        let variants = [
-                            fname.clone(),
-                            format!("/{fname}"),
-                            format!("/images/{fname}"),
-                            format!("static/images/{fname}"),
-                            format!("./static/images/{fname}"),
-                        ];
-                        for v in variants {
-                            bins.push((v, (*bytes).clone()));
-                        }
-                    }
+            if path.is_file()
+                && let Some(ext) = path.extension().and_then(|e| e.to_str())
+                && matches!(
+                    ext.to_lowercase().as_str(),
+                    "png" | "jpg" | "jpeg" | "svg" | "gif" | "webp"
+                )
+            {
+                let bytes = Arc::new(fs::read(&path)?);
+                let fname = path.file_name().unwrap().to_string_lossy().to_string();
+                let variants = [
+                    fname.clone(),
+                    format!("/{fname}"),
+                    format!("/images/{fname}"),
+                    format!("static/images/{fname}"),
+                    format!("./static/images/{fname}"),
+                ];
+                for v in variants {
+                    bins.push((v, (*bytes).clone()));
                 }
             }
         }
@@ -513,18 +513,18 @@ fn load_binary_assets() -> Result<Vec<(String, Vec<u8>)>> {
     bins.extend(theme_variants);
 
     let gen_index = PathBuf::from("static/generated/index.json");
-    if gen_index.exists() {
-        if let Ok(bytes) = fs::read(&gen_index) {
-            let bytes = Arc::new(bytes);
-            let variants = [
-                "static/generated/index.json".to_string(),
-                "/static/generated/index.json".to_string(),
-                "./static/generated/index.json".to_string(),
-                "generated/index.json".to_string(),
-            ];
-            for v in variants {
-                bins.push((v, (*bytes).clone()));
-            }
+    if gen_index.exists()
+        && let Ok(bytes) = fs::read(&gen_index)
+    {
+        let bytes = Arc::new(bytes);
+        let variants = [
+            "static/generated/index.json".to_string(),
+            "/static/generated/index.json".to_string(),
+            "./static/generated/index.json".to_string(),
+            "generated/index.json".to_string(),
+        ];
+        for v in variants {
+            bins.push((v, (*bytes).clone()));
         }
     }
 

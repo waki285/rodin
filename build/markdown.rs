@@ -40,11 +40,7 @@ pub fn build_markdown(
         }
     }
 
-    if !all_ok {
-        Ok(false)
-    } else {
-        Ok(true)
-    }
+    if !all_ok { Ok(false) } else { Ok(true) }
 }
 
 pub fn write_index(metas: &[FrontMatter], generated_dir: &str) -> Result<()> {
@@ -102,10 +98,10 @@ fn run_pandoc_to_markdown(
 /// Locate pandoc in a few common places, including an override via PANDOC_BIN.
 fn find_pandoc() -> Result<Option<String>> {
     let mut candidates: Vec<String> = Vec::new();
-    if let Ok(p) = env::var("PANDOC_BIN") {
-        if !p.trim().is_empty() {
-            candidates.push(p);
-        }
+    if let Ok(p) = env::var("PANDOC_BIN")
+        && !p.trim().is_empty()
+    {
+        candidates.push(p);
     }
     // PATH fallback
     candidates.push("pandoc".to_string());
@@ -116,10 +112,10 @@ fn find_pandoc() -> Result<Option<String>> {
 
     for cand in candidates {
         let status = Command::new(&cand).arg("--version").status();
-        if let Ok(s) = status {
-            if s.success() {
-                return Ok(Some(cand));
-            }
+        if let Ok(s) = status
+            && s.success()
+        {
+            return Ok(Some(cand));
         }
     }
     Ok(None)

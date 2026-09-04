@@ -1,10 +1,10 @@
 use axum::{
+    Extension,
     extract::{ConnectInfo, State},
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{Html, IntoResponse, Response},
-    Extension,
 };
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use hmac::{Hmac, Mac};
 use rand::Rng;
 use std::{collections::HashMap, env, net::SocketAddr, sync::LazyLock};
@@ -16,7 +16,7 @@ use crate::{
     admin_tasks,
     app::state::SharedAppState,
     app::{
-        render::{inject_runtime_tokens, wrap_html_with_options, HtmlOptions, CLIENT_IP_TOKEN},
+        render::{CLIENT_IP_TOKEN, HtmlOptions, inject_runtime_tokens, wrap_html_with_options},
         state,
     },
     asset::asset_url,

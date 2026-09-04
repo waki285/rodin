@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, LazyLock},
 };
 
-use futures::{stream, StreamExt, TryStreamExt};
+use futures::{StreamExt, TryStreamExt, stream};
 use regex::Regex;
 use tokio::fs;
 use tokio::sync::RwLock;
@@ -60,7 +60,7 @@ pub async fn build_prerendered_state() -> anyhow::Result<AppState> {
     let index_bytes = fs::read(&meta_path).await?;
     let metas: Vec<FrontMatter> = serde_json::from_slice(&index_bytes)?;
 
-    let results: Vec<_> = stream::iter(metas.into_iter())
+    let results: Vec<_> = stream::iter(metas)
         .map(|meta| async move {
             let slug = meta.slug.clone();
             let html_path = PathBuf::from("static").join(&meta.html);

@@ -169,7 +169,7 @@ mod subset {
 }
 
 #[cfg(not(windows))]
-pub use subset::{collect_bold_glyphs, collect_glyphs, subset_font, TEXT_SOURCES};
+pub use subset::{TEXT_SOURCES, collect_bold_glyphs, collect_glyphs, subset_font};
 
 use anyhow::{Context, Result};
 use std::{fs, path::PathBuf, process::Command};
@@ -184,9 +184,9 @@ pub(crate) fn compress_to_woff2(ttf_path: &str, woff2_path: &str) -> Result<()> 
     let status = Command::new("woff2_compress")
         .arg(&ttf)
         .status()
-        .with_context(|| {
-            "failed to spawn woff2_compress (install woff2 and ensure it is in PATH)"
-        })?;
+        .with_context(
+            || "failed to spawn woff2_compress (install woff2 and ensure it is in PATH)",
+        )?;
     if !status.success() {
         anyhow::bail!("woff2_compress exited with {}", status);
     }

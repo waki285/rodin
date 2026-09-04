@@ -11,9 +11,8 @@ use std::{convert::Infallible, env, sync::OnceLock};
 
 use axum::routing::get_service;
 use axum::{
-    middleware,
+    Router, middleware,
     routing::{get, post},
-    Router,
 };
 use tokio::net::TcpListener;
 use tower::service_fn;
@@ -143,7 +142,7 @@ pub async fn run() -> anyhow::Result<()> {
 async fn shutdown_signal() {
     #[cfg(unix)]
     {
-        use tokio::signal::unix::{signal, SignalKind};
+        use tokio::signal::unix::{SignalKind, signal};
         let mut sigterm = signal(SignalKind::terminate()).expect("install SIGTERM handler");
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {},
@@ -222,31 +221,29 @@ async fn cache_headers_middleware(
             .get(axum::http::header::CONTENT_TYPE)
             .map(|v| v == "application/octet-stream")
             .unwrap_or(true);
-        if need_ct {
-            if let Some(ext) = ext {
-                // AIクローラーで .typ / .md の場合は text/plain を返す
-                let mime = if is_ai_crawler && is_source_file {
-                    Some("text/plain; charset=utf-8")
-                } else {
-                    guess_mime(ext)
-                };
-                if let Some(mime) = mime {
-                    if let Ok(val) = HeaderValue::from_str(mime) {
-                        res.headers_mut()
-                            .insert(axum::http::header::CONTENT_TYPE, val);
-                    }
-                    // inline で扱えるものは Content-Disposition を明示
-                    if mime.starts_with("text/")
-                        || mime.starts_with("image/")
-                        || mime == "application/javascript"
-                        || mime == "application/json"
-                        || mime == "application/pgp-keys"
-                    {
-                        res.headers_mut().insert(
-                            axum::http::header::CONTENT_DISPOSITION,
-                            HeaderValue::from_static("inline"),
-                        );
-                    }
+        if need_ct && let Some(ext) = ext {
+            // AIクローラーで .typ / .md の場合は text/plain を返す
+            let mime = if is_ai_crawler && is_source_file {
+                Some("text/plain; charset=utf-8")
+            } else {
+                guess_mime(ext)
+            };
+            if let Some(mime) = mime {
+                if let Ok(val) = HeaderValue::from_str(mime) {
+                    res.headers_mut()
+                        .insert(axum::http::header::CONTENT_TYPE, val);
+                }
+                // inline で扱えるものは Content-Disposition を明示
+                if mime.starts_with("text/")
+                    || mime.starts_with("image/")
+                    || mime == "application/javascript"
+                    || mime == "application/json"
+                    || mime == "application/pgp-keys"
+                {
+                    res.headers_mut().insert(
+                        axum::http::header::CONTENT_DISPOSITION,
+                        HeaderValue::from_static("inline"),
+                    );
                 }
             }
         }
@@ -265,10 +262,8 @@ async fn cache_headers_middleware(
                 .insert(axum::http::header::CACHE_CONTROL, val);
         }
         // ETag only for non-hashed assets (hashed ones don't need it)
-        if !is_hashed_asset {
-            if let Ok(val) = HeaderValue::from_str(&format!("W/\"{}\"", GIT_HASH)) {
-                res.headers_mut().insert(axum::http::header::ETAG, val);
-            }
+        if !is_hashed_asset && let Ok(val) = HeaderValue::from_str(&format!("W/\"{}\"", GIT_HASH)) {
+            res.headers_mut().insert(axum::http::header::ETAG, val);
         }
         res.headers_mut().insert(
             axum::http::header::VARY,

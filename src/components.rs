@@ -19,7 +19,7 @@ pub fn ContactPage(
         <div class="blog-wrapper">
             <HeaderBar
                 title=crate::constants::AUTHOR_NAME.to_string()
-                subtitle=format!("{client_ip}")
+                subtitle=client_ip.to_string()
                 current_path=current_path
             />
             <main class="contact-container">
@@ -62,7 +62,7 @@ pub fn BlogListPage(
         <div class="blog-wrapper">
             <HeaderBar
                 title=crate::constants::AUTHOR_NAME.to_string()
-                subtitle=format!("{client_ip}")
+                subtitle=client_ip.to_string()
                 current_path="/blog".to_string()
             />
             <main class="blog-container">
@@ -180,7 +180,7 @@ pub fn BlogPage(
         <div class="blog-wrapper">
             <HeaderBar
                 title=crate::constants::AUTHOR_NAME.to_string()
-                subtitle=format!("{client_ip}")
+                subtitle=client_ip.to_string()
                 current_path=current_path.clone()
             />
             <main class="blog-container prose dark:prose-invert">
@@ -254,7 +254,7 @@ pub fn TagListPage(client_ip: String, tag: String, posts: Vec<BlogListItem>) -> 
         <div class="blog-wrapper">
             <HeaderBar
                 title=crate::constants::AUTHOR_NAME.to_string()
-                subtitle=format!("{client_ip}")
+                subtitle=client_ip.to_string()
                 current_path=format!("/tags/{tag}")
             />
             <main class="blog-container">
@@ -359,7 +359,7 @@ pub fn TopPage(client_ip: String, home_html: String, current_path: String) -> im
                 <div class="top-header">
                     <HeaderBar
                         title=crate::constants::AUTHOR_NAME.to_string()
-                        subtitle=format!("{client_ip}")
+                        subtitle=client_ip.to_string()
                         current_path=current_path.clone()
                     />
                 </div>

@@ -15,7 +15,7 @@ pub fn SearchPage(
         <div class="blog-wrapper">
             <HeaderBar
                 title="すずねーう".to_string()
-                subtitle=format!("{client_ip}")
+                subtitle=client_ip.to_string()
                 current_path=current_path.clone()
             />
             <main class="search-container">

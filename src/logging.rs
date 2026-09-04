@@ -15,10 +15,10 @@ use axum::{
 use std::net::SocketAddr;
 use tokio::sync::mpsc;
 use tracing_subscriber::{
+    EnvFilter, Layer,
     fmt::{self, MakeWriter},
     layer::SubscriberExt,
     util::SubscriberInitExt,
-    EnvFilter, Layer,
 };
 
 use crate::app::get_client_ip;

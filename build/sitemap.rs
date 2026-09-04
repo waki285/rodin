@@ -71,7 +71,7 @@ fn render_xml(urls: &[SitemapEntry]) -> String {
     let mut body = String::new();
     for entry in urls {
         body.push_str("  <url>\n");
-        body.push_str(&format!("    <loc>{}</loc>\n", &entry.loc));
+        body.push_str(&format!("    <loc>{}</loc>\n", entry.loc));
         if let Some(lastmod) = entry.lastmod.as_ref() {
             body.push_str(&format!("    <lastmod>{}</lastmod>\n", lastmod));
         }

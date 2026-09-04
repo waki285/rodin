@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use lightningcss::stylesheet::{MinifyOptions, ParserOptions, PrinterOptions, StyleSheet};
 use lightningcss::targets::{Browsers, Targets};
 use regex::Regex;
@@ -104,20 +104,20 @@ pub fn minify_assets() -> Result<()> {
     let mut font_replacements: HashMap<String, String> = HashMap::new();
     for entry in fs::read_dir(&out_dir)? {
         let p = entry?.path();
-        if let Some(fname) = p.file_name().and_then(|s| s.to_str()) {
-            if re_font.is_match(fname) {
-                let bytes = fs::read(&p)?;
-                let hash = short_hash(&bytes);
-                let (stem, ext) = split_name(fname);
-                let hashed_name = format!("{}-{}.{}", stem, hash, ext);
-                let hashed_path = out_dir.join(&hashed_name);
-                // rename original to hashed
-                fs::rename(&p, &hashed_path)?;
-                let old_path = format!("/assets/build/{}", fname);
-                let new_path = format!("/assets/build/{}", hashed_name);
-                font_replacements.insert(old_path.clone(), new_path.clone());
-                manifest.insert(old_path, new_path);
-            }
+        if let Some(fname) = p.file_name().and_then(|s| s.to_str())
+            && re_font.is_match(fname)
+        {
+            let bytes = fs::read(&p)?;
+            let hash = short_hash(&bytes);
+            let (stem, ext) = split_name(fname);
+            let hashed_name = format!("{}-{}.{}", stem, hash, ext);
+            let hashed_path = out_dir.join(&hashed_name);
+            // rename original to hashed
+            fs::rename(&p, &hashed_path)?;
+            let old_path = format!("/assets/build/{}", fname);
+            let new_path = format!("/assets/build/{}", hashed_name);
+            font_replacements.insert(old_path.clone(), new_path.clone());
+            manifest.insert(old_path, new_path);
         }
     }
 

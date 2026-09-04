@@ -4,12 +4,12 @@ use crate::{
     frontmatter::FrontMatter,
 };
 use leptos::prelude::*;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
 #[cfg(not(debug_assertions))]
-use minify_html::{minify, Cfg as HtmlMinCfg};
+use minify_html::{Cfg as HtmlMinCfg, minify};
 
 pub(crate) const CLIENT_IP_TOKEN: &str = "__CLIENT_IP_PLACEHOLDER__";
 pub(crate) const CSP_NONCE_TOKEN: &str = "__CSP_NONCE__";
@@ -618,7 +618,6 @@ fn build_breadcrumb_structured_data(
     }
     let registry = breadcrumb_registry();
     let mut items = Vec::new();
-    let mut pos = 1;
     for (idx, key) in meta.breadcrumbs.iter().enumerate() {
         let is_last = idx == meta.breadcrumbs.len() - 1;
         if is_last {
@@ -626,19 +625,18 @@ fn build_breadcrumb_structured_data(
             let name = page_title.to_string();
             items.push(json!({
                 "@type": "ListItem",
-                "position": pos,
+                "position": idx + 1,
                 "name": name,
                 "item": absolute_url(path),
             }));
         } else if let Some((name, url)) = registry.get(key.as_str()) {
             items.push(json!({
                 "@type": "ListItem",
-                "position": pos,
+                "position": idx + 1,
                 "name": name,
                 "item": absolute_url(url),
             }));
         }
-        pos += 1;
     }
 
     Some(
@@ -651,8 +649,8 @@ fn build_breadcrumb_structured_data(
     )
 }
 
-pub(crate) fn breadcrumb_registry(
-) -> std::collections::HashMap<&'static str, (&'static str, &'static str)> {
+pub(crate) fn breadcrumb_registry()
+-> std::collections::HashMap<&'static str, (&'static str, &'static str)> {
     let mut m = std::collections::HashMap::new();
     m.insert("home", ("ホーム", "/"));
     m.insert("profile", ("プロフィール", "/profile"));
@@ -745,10 +743,10 @@ fn build_article_structured_data(meta: &FrontMatter) -> Option<String> {
     if !meta.tags.is_empty() {
         obj.insert("keywords".into(), json!(meta.tags));
     }
-    if let Some(section) = meta.subtitle.as_ref() {
-        if !section.is_empty() {
-            obj.insert("articleSection".into(), json!(section));
-        }
+    if let Some(section) = meta.subtitle.as_ref()
+        && !section.is_empty()
+    {
+        obj.insert("articleSection".into(), json!(section));
     }
 
     Some(Value::Object(obj).to_string())

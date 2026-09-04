@@ -2,10 +2,10 @@ use std::{collections::HashMap, fs, path::Path, sync::LazyLock};
 
 static MANIFEST: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
     let path = Path::new("static/generated/assets-manifest.json");
-    if let Ok(s) = fs::read_to_string(path) {
-        if let Ok(m) = serde_json::from_str::<HashMap<String, String>>(&s) {
-            return m;
-        }
+    if let Ok(s) = fs::read_to_string(path)
+        && let Ok(m) = serde_json::from_str::<HashMap<String, String>>(&s)
+    {
+        return m;
     }
     HashMap::new()
 });
