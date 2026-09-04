@@ -12,8 +12,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # sccache
-RUN curl -L https://github.com/mozilla/sccache/releases/latest/download/sccache-v0.13.0-x86_64-unknown-linux-musl.tar.gz \
-    | tar xz && mv sccache-v0.13.0-x86_64-unknown-linux-musl/sccache /usr/local/bin/ && rm -rf sccache-v0.13.0-x86_64-unknown-linux-musl
+RUN curl -L https://github.com/mozilla/sccache/releases/latest/download/sccache-v0.17.0-x86_64-unknown-linux-musl.tar.gz \
+    | tar xz && mv sccache-v0.17.0-x86_64-unknown-linux-musl/sccache /usr/local/bin/ && rm -rf sccache-v0.17.0-x86_64-unknown-linux-musl
 
 # pnpm (lockfile matches repo)
 RUN corepack enable && corepack prepare pnpm@10.24.0 --activate
