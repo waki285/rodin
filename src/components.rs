@@ -25,7 +25,7 @@ pub fn ContactPage(
             <main class="contact-container">
                 <h1>"お問い合わせ"</h1>
                 <p class="contact-description">
-                    "ご連絡ありがとうございます。必要事項をご入力のうえ送信してください。"
+                    "必要事項をご入力のうえ送信してください。"
                 </p>
                 <form id="contact-form" class="contact-form" method="post" action="/api/contact" novalidate>
                     <label for="contact-name">"名前"</label>
